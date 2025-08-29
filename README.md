@@ -1,7 +1,5 @@
 # Simulador de Planificación de Procesos
 
-## Descripción del Proyecto
-
 Este proyecto implementa un simulador de estrategias de planificación del procesador para un sistema multiprogramado y monoprocesador. Permite comparar diferentes algoritmos de planificación y analizar su rendimiento.
 
 ## Estructura del Proyecto
@@ -27,4 +25,8 @@ planificador-procesos/
 ├── main.py                 
 └── README.md               
 ```
+## Levantar Proyecto
 
+- Instalar **Poetry**: `pipx install poetry`
+- Instalar dependencias: `poetry install`
+- Correr proyecto: `poetry run python main.py`
