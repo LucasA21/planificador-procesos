@@ -25,8 +25,36 @@ planificador-procesos/
 ├── main.py                 
 └── README.md               
 ```
-## Levantar Proyecto
+## Levantar Desarrollo
 
-- Instalar **Poetry**: `pipx install poetry`
-- Instalar dependencias: `poetry install`
-- Correr proyecto: `poetry run python main.py`
+- Instalar **Poetry**:
+```bash 
+pipx install poetry
+```
+- Instalar dependencias:
+```bash
+poetry install
+```
+- Correr proyecto:
+```bash 
+poetry run python main.py
+```
+
+## Build
+
+### Linux/macOS
+Ejecutar script de build
+```bash
+./build/scripts/build.sh 
+```
+El build se va a guardar en la carpeta `./dist/linux/Simulador_Planificacion`
+
+### Windows
+Ejecutar script de build
+```bash
+build\scripts\build_windows.bat 
+```
+
+El build se va a guardar en la carpeta `dist\windows\Simulador_Planificacion.exe`
+
+
