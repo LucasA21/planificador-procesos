@@ -7,71 +7,76 @@ import customtkinter as ctk
 class SelectorPoliticas(ctk.CTkFrame):
     """Componente para seleccionar políticas de planificación."""
     
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, corner_radius=10, **kwargs)
+    def __init__(self, parent, colores=None, factor_escala=1.0, **kwargs):
+        super().__init__(parent, corner_radius=15, fg_color="transparent", **kwargs)
         
+        self.colores = colores or {}
+        self.factor_escala = factor_escala
         self.politica_var = ctk.StringVar(value="FCFS")
         self.callback_cambio_politica = None
         
-        # Configurar descripciones primero
-        self._configurar_descripciones()
-        # Luego crear widgets
+        # Configurar grid para que ocupe todo el ancho
+        self.grid_columnconfigure(0, weight=1)
+        
         self._crear_widgets()
     
     def _crear_widgets(self):
         """Crea los widgets del componente."""
-        # Título de sección
-        titulo = ctk.CTkLabel(
-            self, 
-            text="POLITICA DE PLANIFICACION", 
-            font=ctk.CTkFont(size=16, weight="bold")
+        # Frame principal con borde y sombra
+        main_frame = ctk.CTkFrame(
+            self,
+            corner_radius=int(15 * self.factor_escala),
+            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
+            border_width=1,
+            border_color=self.colores.get("border", "#404040")
         )
-        titulo.grid(row=0, column=0, pady=(15, 15), padx=15)
+        main_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
+        main_frame.grid_columnconfigure(0, weight=1)
         
-        # Selector de política
-        self.menu_politica = ctk.CTkOptionMenu(
-            self, 
+        # Título de sección con icono visual
+        titulo_frame = ctk.CTkFrame(main_frame, fg_color="transparent", height=int(50 * self.factor_escala))
+        titulo_frame.grid(row=0, column=0, sticky="ew", padx=int(20 * self.factor_escala), pady=(int(20 * self.factor_escala), int(20 * self.factor_escala)))
+        titulo_frame.grid_columnconfigure(0, weight=1)
+        
+        titulo = ctk.CTkLabel(
+            titulo_frame, 
+            text="Política de Planificación",
+            font=ctk.CTkFont(size=int(18 * self.factor_escala), weight="bold"),
+            text_color=self.colores.get("text_primary", "#ffffff")
+        )
+        titulo.grid(row=0, column=0, sticky="w")
+        
+        self.menu_politica = ctk.CTkComboBox(
+            main_frame, 
             variable=self.politica_var,
             values=["FCFS", "Prioridad Externa", "Round Robin", "SPN", "SRTN"],
-            height=35,
-            command=self._cambio_politica
+            width=int(300 * self.factor_escala), 
+            height=int(50 * self.factor_escala),  
+            corner_radius=int(12 * self.factor_escala),
+            fg_color=self.colores.get("bg_card", "#3a3a3a"),
+            border_color=self.colores.get("border", "#404040"),
+            button_color=self.colores.get("accent", "#4f9eff"),
+            button_hover_color=self.colores.get("accent_hover", "#3d7fd9"),
+            dropdown_fg_color=self.colores.get("bg_card", "#3a3a3a"),
+            dropdown_hover_color=self.colores.get("accent", "#4f9eff"),
+            dropdown_text_color=self.colores.get("text_primary", "#ffffff"),
+            text_color=self.colores.get("text_primary", "#ffffff"),
+            text_color_disabled=self.colores.get("text_secondary", "#b3b3b3"),
+            font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold"),  
+            dropdown_font=ctk.CTkFont(size=int(24 * self.factor_escala), weight="normal"),  
+            command=self._cambio_politica,
+            state="readonly",  
+            justify="left" 
         )
-        self.menu_politica.grid(row=1, column=0, pady=(0, 15), padx=15, sticky="ew")
+        self.menu_politica.grid(row=1, column=0, pady=(0, int(25 * self.factor_escala)), padx=int(20 * self.factor_escala), sticky="ew")
         
-        # Descripción de la política seleccionada
-        self.label_descripcion = ctk.CTkLabel(
-            self,
-            text="",
-            text_color="lightblue",
-            wraplength=250
-        )
-        self.label_descripcion.grid(row=2, column=0, pady=(0, 15), padx=15)
-        
-        # Actualizar descripción inicial
-        self._actualizar_descripcion("FCFS")
-    
-    def _configurar_descripciones(self):
-        """Configura las descripciones de cada política."""
-        self.descripciones = {
-            "FCFS": "FCFS: First Come First Served - Procesos se ejecutan en orden de llegada",
-            "Prioridad Externa": "Prioridad Externa: Se ejecuta el proceso con mayor prioridad",
-            "Round Robin": "Round Robin: Cada proceso ejecuta por un quantum fijo",
-            "SPN": "SPN: Shortest Process Next - Se ejecuta el proceso con menor tiempo total",
-            "SRTN": "SRTN: Shortest Remaining Time Next - Se ejecuta el proceso con menor tiempo restante"
-        }
+        main_frame.grid_columnconfigure(0, weight=1)
     
     def _cambio_politica(self, value):
         """Maneja el cambio de política de planificación."""
-        self._actualizar_descripcion(value)
-        
         # Notificar cambio de política
         if self.callback_cambio_politica:
             self.callback_cambio_politica(value)
-    
-    def _actualizar_descripcion(self, politica):
-        """Actualiza la descripción de la política seleccionada."""
-        descripcion = self.descripciones.get(politica, "")
-        self.label_descripcion.configure(text=descripcion)
     
     def obtener_politica_seleccionada(self):
         """Retorna la política seleccionada."""
