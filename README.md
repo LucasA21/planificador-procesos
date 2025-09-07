@@ -8,23 +8,33 @@ Este proyecto implementa un simulador de estrategias de planificación del proce
 planificador-procesos/
 ├── src/                 
 │   ├── simulador/              
-│   │   ├── proceso.py     # Clase Proceso
-│   │   ├── planificador.py # Clase base Planificador
-│   │   └── algoritmos/    # Implementaciones de algoritmos
+│   │   ├── proceso.py        # Clase Proceso
+│   │   ├── pcb.py            # Process Control Block
+│   │   ├── estado_proceso.py # Tipos de estados (ENUM)
+│   │   ├── evento.py         # Evento
+│   │   ├── cola.py           # Cola de procesos listos
+│   │   ├── algoritmos/       # Algoritmos de planificacion
+│   │   └── planificador.py   # Planificador de procesos
 │   ├── ui/                
-│   │   ├── components/    # Componentes 
+│   │   ├── components/    # Componentes UI 
 │   │   ├── main_window.py # Ventana principal
-│   │   └── interfaz.py    # Clase principal de la UI
-│   ├── data/              
-│   │   ├── parser.py      # Lectura de archivos
-│   │   └── export.py      # Exportación de resultados
-│   └── utils/             
+│   │   ├── theme.py       # Configuracion de colores
+│   │   └── README.md                 
 ├── data/                 
-│   ├── input/             # Archivos de procesos
-│   └── output/            # Resultados de simulación
+│   ├── input/   # Archivos de procesos (JSON)
+│   └── output/  # Resultados de simulación 
 ├── main.py                 
 └── README.md               
 ```
+
+
+## Ejecutable
+
+La carpeta `execute` contiene dos archivos ejecutables, ya funcionales:
+
+- **Linux:** `execute/linux/Simulador_Planificacion`
+- **Windows:** `execute/windows/Simulador_Planificacion.exe`
+
 ## Levantar Desarrollo
 
 - Instalar **Poetry**:

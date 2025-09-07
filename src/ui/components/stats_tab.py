@@ -8,10 +8,9 @@ import tkinter as tk
 class PestañaEstadisticas(ctk.CTkFrame):
     """Componente para mostrar estadísticas de la simulación."""
     
-    def __init__(self, parent, colores=None, factor_escala=1.0, **kwargs):
+    def __init__(self, parent, factor_escala=1.0, **kwargs):
         super().__init__(parent, corner_radius=15, fg_color="transparent", **kwargs)
         
-        self.colores = colores or {}
         self.factor_escala = factor_escala
         self._crear_widgets()
     
@@ -21,9 +20,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         main_frame = ctk.CTkFrame(
             self,
             corner_radius=int(15 * self.factor_escala),
-            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         main_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
         main_frame.grid_columnconfigure(0, weight=1)
@@ -37,8 +34,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         titulo = ctk.CTkLabel(
             titulo_frame,
             text="📊 Estadísticas y Métricas de la Simulación",
-            font=ctk.CTkFont(size=int(18 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(18 * self.factor_escala), weight="bold")
         )
         titulo.grid(row=0, column=0, sticky="w")
         
@@ -46,7 +42,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
         linea = ctk.CTkFrame(
             titulo_frame,
             height=int(3 * self.factor_escala),
-            fg_color=self.colores["border_light"],
             corner_radius=int(2 * self.factor_escala)
         )
         linea.grid(row=1, column=0, pady=(int(8 * self.factor_escala), 0), sticky="ew")
@@ -55,9 +50,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         frame_stats = ctk.CTkFrame(
             main_frame, 
             corner_radius=int(12 * self.factor_escala),
-            fg_color=self.colores.get("bg_card", "#3a3a3a"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         frame_stats.grid(row=1, column=0, sticky="nsew", padx=int(20 * self.factor_escala), pady=(0, int(20 * self.factor_escala)))
         frame_stats.grid_columnconfigure(0, weight=1)
@@ -76,9 +69,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         frame_procesos = ctk.CTkFrame(
             parent, 
             corner_radius=int(10 * self.factor_escala),
-            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         frame_procesos.grid(row=0, column=0, sticky="nsew", padx=(0, int(10 * self.factor_escala)), pady=int(10 * self.factor_escala))
         frame_procesos.grid_columnconfigure(0, weight=1)
@@ -87,8 +78,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         titulo_procesos = ctk.CTkLabel(
             frame_procesos,
             text="📋 Por Proceso",
-            font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
         )
         titulo_procesos.grid(row=0, column=0, pady=(int(15 * self.factor_escala), int(10 * self.factor_escala)), padx=int(15 * self.factor_escala), sticky="w")
         
@@ -98,8 +88,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
             width=300, 
             height=200,
             corner_radius=int(8 * self.factor_escala),
-            fg_color=self.colores.get("bg_card", "#3a3a3a"),
-            text_color=self.colores.get("text_primary", "#ffffff"),
             font=ctk.CTkFont(size=int(13 * self.factor_escala), family="Consolas"),
             border_width=0
         )
@@ -109,9 +97,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         frame_tanda = ctk.CTkFrame(
             parent, 
             corner_radius=int(10 * self.factor_escala),
-            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         frame_tanda.grid(row=0, column=1, sticky="nsew", padx=(int(10 * self.factor_escala), 0), pady=int(10 * self.factor_escala))
         frame_tanda.grid_columnconfigure(0, weight=1)
@@ -119,8 +105,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         titulo_tanda = ctk.CTkLabel(
             frame_tanda,
             text="🔄 Tanda Completa",
-            font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
         )
         titulo_tanda.grid(row=0, column=0, pady=(int(15 * self.factor_escala), int(10 * self.factor_escala)), padx=int(15 * self.factor_escala), sticky="w")
         
@@ -128,7 +113,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
         self.label_tr_tanda = ctk.CTkLabel(
             frame_tanda, 
             text="⏱️ Tiempo de Retorno: --",
-            text_color=self.colores.get("text_secondary", "#b3b3b3"),
             font=ctk.CTkFont(size=int(13 * self.factor_escala))
         )
         self.label_tr_tanda.grid(row=1, column=0, pady=int(8 * self.factor_escala), padx=int(15 * self.factor_escala), sticky="w")
@@ -136,7 +120,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
         self.label_tmr_tanda = ctk.CTkLabel(
             frame_tanda, 
             text="📈 Tiempo Medio de Retorno: --",
-            text_color=self.colores.get("text_secondary", "#b3b3b3"),
             font=ctk.CTkFont(size=int(13 * self.factor_escala))
         )
         self.label_tmr_tanda.grid(row=2, column=0, pady=int(8 * self.factor_escala), padx=int(15 * self.factor_escala), sticky="w")
@@ -145,9 +128,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         frame_cpu = ctk.CTkFrame(
             parent, 
             corner_radius=int(10 * self.factor_escala),
-            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         frame_cpu.grid(row=1, column=0, columnspan=2, sticky="ew", padx=0, pady=(int(10 * self.factor_escala), 0))
         frame_cpu.grid_columnconfigure(0, weight=1)
@@ -155,8 +136,7 @@ class PestañaEstadisticas(ctk.CTkFrame):
         titulo_cpu = ctk.CTkLabel(
             frame_cpu,
             text="💻 Uso de CPU",
-            font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
         )
         titulo_cpu.grid(row=0, column=0, pady=(int(15 * self.factor_escala), int(10 * self.factor_escala)), padx=int(15 * self.factor_escala), sticky="w")
         
@@ -164,7 +144,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
         self.label_cpu_desocupada = ctk.CTkLabel(
             frame_cpu, 
             text="🟢 CPU Desocupada: --",
-            text_color=self.colores.get("text_secondary", "#b3b3b3"),
             font=ctk.CTkFont(size=int(13 * self.factor_escala))
         )
         self.label_cpu_desocupada.grid(row=1, column=0, pady=int(8 * self.factor_escala), padx=int(15 * self.factor_escala), sticky="w")
@@ -172,7 +151,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
         self.label_cpu_so = ctk.CTkLabel(
             frame_cpu, 
             text="🔧 CPU por SO: --",
-            text_color=self.colores.get("text_secondary", "#b3b3b3"),
             font=ctk.CTkFont(size=int(13 * self.factor_escala))
         )
         self.label_cpu_so.grid(row=2, column=0, pady=int(8 * self.factor_escala), padx=int(15 * self.factor_escala), sticky="w")
@@ -180,7 +158,6 @@ class PestañaEstadisticas(ctk.CTkFrame):
         self.label_cpu_procesos = ctk.CTkLabel(
             frame_cpu, 
             text="⚡ CPU por Procesos: --",
-            text_color=self.colores.get("text_secondary", "#b3b3b3"),
             font=ctk.CTkFont(size=int(13 * self.factor_escala))
         )
         self.label_cpu_procesos.grid(row=3, column=0, pady=int(8 * self.factor_escala), padx=int(15 * self.factor_escala), sticky="w")

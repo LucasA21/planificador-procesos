@@ -8,10 +8,9 @@ import tkinter as tk
 class EntradaParametros(ctk.CTkFrame):
     """Componente para entrada de parámetros del sistema."""
     
-    def __init__(self, parent, colores=None, factor_escala=1.0, **kwargs):
+    def __init__(self, parent, factor_escala=1.0, **kwargs):
         super().__init__(parent, corner_radius=15, fg_color="transparent", **kwargs)
         
-        self.colores = colores or {}
         self.factor_escala = factor_escala
         self.entradas = {}
         self.indicadores = {}
@@ -29,9 +28,7 @@ class EntradaParametros(ctk.CTkFrame):
         main_frame = ctk.CTkFrame(
             self,
             corner_radius=int(15 * self.factor_escala),
-            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         main_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
         main_frame.grid_columnconfigure(0, weight=1)
@@ -44,8 +41,7 @@ class EntradaParametros(ctk.CTkFrame):
         titulo = ctk.CTkLabel(
             titulo_frame, 
             text="Parámetros del Sistema",
-            font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold")
         )
         titulo.grid(row=0, column=0, sticky="w")
         
@@ -70,8 +66,7 @@ class EntradaParametros(ctk.CTkFrame):
         label = ctk.CTkLabel(
             param_frame, 
             text=texto_label, 
-            font=ctk.CTkFont(size=int(13 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(13 * self.factor_escala), weight="bold")
         )
         label.grid(row=0, column=0, pady=(int(15 * self.factor_escala), int(8 * self.factor_escala)), padx=0, sticky="w")
         
@@ -85,10 +80,7 @@ class EntradaParametros(ctk.CTkFrame):
             input_frame, 
             height=int(35 * self.factor_escala),
             corner_radius=int(8 * self.factor_escala),
-            fg_color=self.colores.get("bg_card", "#3a3a3a"),
-            border_color=self.colores.get("border", "#404040"),
             border_width=1,
-            text_color=self.colores.get("text_primary", "#ffffff"),
             font=ctk.CTkFont(size=int(14 * self.factor_escala)),
             placeholder_text="Ingrese valor..."
         )
@@ -99,8 +91,7 @@ class EntradaParametros(ctk.CTkFrame):
             input_frame,
             width=int(8 * self.factor_escala),
             height=int(8 * self.factor_escala),
-            corner_radius=int(4 * self.factor_escala),
-            fg_color=self.colores.get("text_muted", "#808080")
+            corner_radius=int(4 * self.factor_escala)
         )
         indicador.grid(row=0, column=1, pady=(0, int(15 * self.factor_escala)), padx=(int(8 * self.factor_escala), 0), sticky="e")
         
@@ -116,11 +107,11 @@ class EntradaParametros(ctk.CTkFrame):
     
     def _on_focus_in(self, entrada):
         """Maneja el evento de focus in."""
-        entrada.configure(border_color=self.colores.get("accent", "#4f9eff"))
+        entrada.configure(border_color="blue")
     
     def _on_focus_out(self, entrada):
         """Maneja el evento de focus out."""
-        entrada.configure(border_color=self.colores.get("border", "#404040"))
+        entrada.configure(border_color="gray")
     
     def _validar_parametro(self, nombre_param):
         """Valida un parámetro específico y actualiza su indicador visual."""
@@ -128,16 +119,16 @@ class EntradaParametros(ctk.CTkFrame):
             valor = int(self.entradas[nombre_param].get())
             if valor < 0:
                 # Error: valor negativo
-                self.indicadores[nombre_param].configure(fg_color=self.colores.get("error", "#f87171"))
-                self.entradas[nombre_param].configure(border_color=self.colores.get("error", "#f87171"))
+                self.indicadores[nombre_param].configure(fg_color="red")
+                self.entradas[nombre_param].configure(border_color="red")
             else:
                 # Éxito: valor válido
-                self.indicadores[nombre_param].configure(fg_color=self.colores.get("success", "#4ade80"))
-                self.entradas[nombre_param].configure(border_color=self.colores.get("border", "#404040"))
+                self.indicadores[nombre_param].configure(fg_color="green")
+                self.entradas[nombre_param].configure(border_color="gray")
         except ValueError:
             # Error: no es un número
-            self.indicadores[nombre_param].configure(fg_color=self.colores.get("error", "#f87171"))
-            self.entradas[nombre_param].configure(border_color=self.colores.get("error", "#f87171"))
+            self.indicadores[nombre_param].configure(fg_color="red")
+            self.entradas[nombre_param].configure(border_color="red")
     
     def _cambio_parametro(self, nombre_param):
         """Maneja el cambio de un parámetro con validación en tiempo real."""
@@ -175,15 +166,11 @@ class EntradaParametros(ctk.CTkFrame):
         if "quantum" in self.entradas:
             if habilitar:
                 self.entradas["quantum"].configure(
-                    state="normal",
-                    fg_color=self.colores.get("bg_card", "#3a3a3a"),
-                    text_color=self.colores.get("text_primary", "#ffffff")
+                    state="normal"
                 )
             else:
                 self.entradas["quantum"].configure(
-                    state="disabled",
-                    fg_color=self.colores.get("bg_primary", "#1a1a1a"),
-                    text_color=self.colores.get("text_muted", "#808080")
+                    state="disabled"
                 )
     
     def establecer_callback(self, callback):

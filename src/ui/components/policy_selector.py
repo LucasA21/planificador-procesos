@@ -7,10 +7,9 @@ import customtkinter as ctk
 class SelectorPoliticas(ctk.CTkFrame):
     """Componente para seleccionar políticas de planificación."""
     
-    def __init__(self, parent, colores=None, factor_escala=1.0, **kwargs):
+    def __init__(self, parent, factor_escala=1.0, **kwargs):
         super().__init__(parent, corner_radius=15, fg_color="transparent", **kwargs)
         
-        self.colores = colores or {}
         self.factor_escala = factor_escala
         self.politica_var = ctk.StringVar(value="FCFS")
         self.callback_cambio_politica = None
@@ -26,9 +25,7 @@ class SelectorPoliticas(ctk.CTkFrame):
         main_frame = ctk.CTkFrame(
             self,
             corner_radius=int(15 * self.factor_escala),
-            fg_color=self.colores.get("bg_secondary", "#2d2d2d"),
-            border_width=1,
-            border_color=self.colores.get("border", "#404040")
+            border_width=1
         )
         main_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
         main_frame.grid_columnconfigure(0, weight=1)
@@ -41,8 +38,7 @@ class SelectorPoliticas(ctk.CTkFrame):
         titulo = ctk.CTkLabel(
             titulo_frame, 
             text="Política de Planificación",
-            font=ctk.CTkFont(size=int(18 * self.factor_escala), weight="bold"),
-            text_color=self.colores.get("text_primary", "#ffffff")
+            font=ctk.CTkFont(size=int(18 * self.factor_escala), weight="bold")
         )
         titulo.grid(row=0, column=0, sticky="w")
         
@@ -53,15 +49,6 @@ class SelectorPoliticas(ctk.CTkFrame):
             width=int(300 * self.factor_escala), 
             height=int(50 * self.factor_escala),  
             corner_radius=int(12 * self.factor_escala),
-            fg_color=self.colores.get("bg_card", "#3a3a3a"),
-            border_color=self.colores.get("border", "#404040"),
-            button_color=self.colores.get("accent", "#4f9eff"),
-            button_hover_color=self.colores.get("accent_hover", "#3d7fd9"),
-            dropdown_fg_color=self.colores.get("bg_card", "#3a3a3a"),
-            dropdown_hover_color=self.colores.get("accent", "#4f9eff"),
-            dropdown_text_color=self.colores.get("text_primary", "#ffffff"),
-            text_color=self.colores.get("text_primary", "#ffffff"),
-            text_color_disabled=self.colores.get("text_secondary", "#b3b3b3"),
             font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold"),  
             dropdown_font=ctk.CTkFont(size=int(24 * self.factor_escala), weight="normal"),  
             command=self._cambio_politica,

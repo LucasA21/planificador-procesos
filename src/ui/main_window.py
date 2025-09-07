@@ -1,13 +1,11 @@
 import customtkinter as ctk
 import tkinter as tk
 
-from .theme import COLORES_TEMA
 from .components.file_loader import CargadorArchivos
 from .components.policy_selector import SelectorPoliticas
 from .components.parameter_input import EntradaParametros
 from .components.results_tab import PestañaResultados
 from .components.gantt_tab import PestañaGantt
-from .components.stats_tab import PestañaEstadisticas
 
 class VentanaPrincipal(ctk.CTk):
     
@@ -42,10 +40,8 @@ class VentanaPrincipal(ctk.CTk):
     
     def _configurar_tema(self):
         """Configura el tema moderno de la aplicación."""
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
-        
-        self.colores = COLORES_TEMA
+        ctk.set_appearance_mode("Dark")  # Siempre modo oscuro
+        ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
     
     def _configurar_escalado(self):
         """Configura el escalado dinámico basado en la resolución de pantalla."""
@@ -110,9 +106,6 @@ class VentanaPrincipal(ctk.CTk):
         self.sidebar = ctk.CTkFrame(
             self, 
             corner_radius=self.bordes["radius_xlarge"],
-            fg_color=self.colores["bg_card"],
-
-            border_color=self.colores["border"],
             width=int(420 * self.factor_escala)  # Aumentado de 350 a 420
         )
         self.sidebar.grid(row=0, column=0, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
@@ -134,9 +127,6 @@ class VentanaPrincipal(ctk.CTk):
             text="Ejecutar Simulación",
             height=int(60 * self.factor_escala),
             corner_radius=int(12 * self.factor_escala),
-            fg_color=self.colores["success"],
-            hover_color=self.colores["success_light"],
-            text_color=self.colores["text_primary"],
             font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold"),
             border_width=0,
             state="disabled",
@@ -144,19 +134,11 @@ class VentanaPrincipal(ctk.CTk):
         )
         self.boton_simular_header.grid(row=0, column=0, sticky="ew")
         
-        # Configurar el botón para mantener texto blanco cuando esté deshabilitado
-        self.boton_simular_header._text_color_disabled = self.colores["text_primary"]
-        
-        # Configurar colores personalizados para el estado deshabilitado
-        self.boton_simular_header.configure(
-            text_color_disabled=self.colores["text_primary"]  # Forzar texto blanco cuando esté deshabilitado
-        )
         
         # Línea decorativa con sombra
         linea = ctk.CTkFrame(
             header_frame,
             height=int(3 * self.factor_escala),
-            fg_color=self.colores["border_light"],
             corner_radius=int(2 * self.factor_escala)
         )
         linea.grid(row=1, column=0, pady=(int(8 * self.factor_escala), 0), sticky="ew")
@@ -176,7 +158,6 @@ class VentanaPrincipal(ctk.CTk):
         # Componente de carga de archivos
         self.cargador_archivos = CargadorArchivos(
             self.scrollable_frame, 
-            colores=self.colores,
             factor_escala=self.factor_escala
         )
         self.cargador_archivos.grid(row=0, column=0, sticky="ew", pady=(0, self.espaciado["lg"]))
@@ -184,7 +165,6 @@ class VentanaPrincipal(ctk.CTk):
         # Componente de selección de política
         self.selector_politicas = SelectorPoliticas(
             self.scrollable_frame, 
-            colores=self.colores,
             factor_escala=self.factor_escala
         )
         self.selector_politicas.grid(row=1, column=0, sticky="ew", pady=(0, self.espaciado["lg"]))
@@ -192,10 +172,10 @@ class VentanaPrincipal(ctk.CTk):
         # Componente de parámetros del sistema
         self.entrada_parametros = EntradaParametros(
             self.scrollable_frame, 
-            colores=self.colores,
             factor_escala=self.factor_escala
         )
         self.entrada_parametros.grid(row=2, column=0, sticky="ew", pady=(0, self.espaciado["lg"]))
+        
     
     
     def _crear_area_principal(self):
@@ -204,9 +184,7 @@ class VentanaPrincipal(ctk.CTk):
         self.area_principal = ctk.CTkFrame(
             self, 
             corner_radius=self.bordes["radius_xlarge"],
-            fg_color=self.colores["bg_card"],
-            border_width=0,  # Sin borde para eliminar la línea externa
-            border_color=self.colores["border"]
+            border_width=0  # Sin borde para eliminar la línea externa
         )
         self.area_principal.grid(row=0, column=2, sticky="nsew", padx=(0, self.espaciado["lg"]), pady=self.espaciado["lg"])
         self.area_principal.grid_columnconfigure(0, weight=1)
@@ -221,9 +199,7 @@ class VentanaPrincipal(ctk.CTk):
         frame_tabs = ctk.CTkFrame(
             self.area_principal, 
             corner_radius=self.bordes["radius_large"],
-            fg_color=self.colores["bg_secondary"],  # Color gris de fondo
-            border_width=0,  # Sin borde para eliminar la línea molesta
-            border_color=self.colores["border"]
+            border_width=0  # Sin borde para eliminar la línea molesta
         )
         frame_tabs.grid(row=0, column=0, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
         frame_tabs.grid_columnconfigure(0, weight=1)
@@ -244,17 +220,15 @@ class VentanaPrincipal(ctk.CTk):
             height=int(50 * self.factor_escala)
         )
         tabs_frame.grid(row=0, column=0, sticky="ew", padx=self.espaciado["lg"], pady=(self.espaciado["lg"], 0))
-        tabs_frame.grid_columnconfigure((0, 1, 2), weight=1)
+        tabs_frame.grid_columnconfigure((0, 1), weight=1)
         
         # Botón pestaña resultados
         self.boton_tab_resultados = ctk.CTkButton(
             tabs_frame,
-            text="📋 Resultados",
+            text="📊 Resultados de Simulación",
             command=lambda: self._cambiar_tab("resultados"),
             height=int(40 * self.factor_escala),
             corner_radius=self.bordes["radius_small"],
-            fg_color=self.colores["accent"],
-            hover_color=self.colores["accent_hover"],
             font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
         )
         self.boton_tab_resultados.grid(row=0, column=0, pady=(0, 0), padx=(0, 5), sticky="ew")
@@ -267,52 +241,27 @@ class VentanaPrincipal(ctk.CTk):
             height=int(40 * self.factor_escala),
             corner_radius=self.bordes["radius_small"],
             fg_color="transparent",
-            hover_color=self.colores["bg_card"],
             font=ctk.CTkFont(size=int(14 * self.factor_escala))
         )
-        self.boton_tab_gantt.grid(row=0, column=1, pady=(0, 0), padx=5, sticky="ew")
-        
-        # Botón pestaña estadísticas
-        self.boton_tab_estadisticas = ctk.CTkButton(
-            tabs_frame,
-            text="📊 Estadísticas",
-            command=lambda: self._cambiar_tab("estadisticas"),
-            height=int(40 * self.factor_escala),
-            corner_radius=self.bordes["radius_small"],
-            fg_color="transparent",
-            hover_color=self.colores["bg_card"],
-            font=ctk.CTkFont(size=int(14 * self.factor_escala))
-        )
-        self.boton_tab_estadisticas.grid(row=0, column=2, pady=(0, 0), padx=(5, 0), sticky="ew")
+        self.boton_tab_gantt.grid(row=0, column=1, pady=(0, 0), padx=(5, 0), sticky="ew")
     
     def _crear_contenido_pestañas(self, parent):
         """Crea el contenido de las pestañas."""
         # Pestaña de resultados
         self.pestaña_resultados = PestañaResultados(
             parent, 
-            colores=self.colores,
             factor_escala=self.factor_escala
         )
-        self.pestaña_resultados.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
-        self.pestaña_resultados.configurar_tags()
+        self.pestaña_resultados.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
+        self.pestaña_resultados.mostrar_mensaje_inicial()
         
         # Pestaña de Gantt
         self.pestaña_gantt = PestañaGantt(
             parent, 
-            colores=self.colores,
             factor_escala=self.factor_escala
         )
-        self.pestaña_gantt.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
+        self.pestaña_gantt.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
         self.pestaña_gantt.grid_remove()  # Ocultar inicialmente
-        
-        # Pestaña de estadísticas
-        self.pestaña_estadisticas = PestañaEstadisticas(
-            parent, 
-            colores=self.colores,
-            factor_escala=self.factor_escala
-        )
-        self.pestaña_estadisticas.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
-        self.pestaña_estadisticas.grid_remove()  # Ocultar inicialmente
     
     def _configurar_callbacks(self):
         """Configura los callbacks entre componentes."""
@@ -370,21 +319,14 @@ class VentanaPrincipal(ctk.CTk):
         # Ocultar todas las pestañas
         self.pestaña_resultados.grid_remove()
         self.pestaña_gantt.grid_remove()
-        self.pestaña_estadisticas.grid_remove()
         
         # Mostrar la pestaña seleccionada
         if tab == "resultados":
             self.pestaña_resultados.grid()
             self.boton_tab_resultados.configure(
-                fg_color=self.colores["accent"],
-                hover_color=self.colores["accent_hover"],
                 font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
             )
             self.boton_tab_gantt.configure(
-                fg_color="transparent",
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
-            self.boton_tab_estadisticas.configure(
                 fg_color="transparent",
                 font=ctk.CTkFont(size=int(14 * self.factor_escala))
             )
@@ -395,27 +337,6 @@ class VentanaPrincipal(ctk.CTk):
                 font=ctk.CTkFont(size=int(14 * self.factor_escala))
             )
             self.boton_tab_gantt.configure(
-                fg_color=self.colores["accent"],
-                hover_color=self.colores["accent_hover"],
-                font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
-            )
-            self.boton_tab_estadisticas.configure(
-                fg_color="transparent",
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
-        elif tab == "estadisticas":
-            self.pestaña_estadisticas.grid()
-            self.boton_tab_resultados.configure(
-                fg_color="transparent",
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
-            self.boton_tab_gantt.configure(
-                fg_color="transparent",
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
-            self.boton_tab_estadisticas.configure(
-                fg_color=self.colores["accent"],
-                hover_color=self.colores["accent_hover"],
                 font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
             )
     
@@ -444,43 +365,47 @@ class VentanaPrincipal(ctk.CTk):
         # Limpiar resultados anteriores
         self.pestaña_resultados.limpiar_resultados()
         
-        # Agregar información de la simulación
-        self.pestaña_resultados.agregar_resultado("INICIANDO SIMULACIÓN")
-        self.pestaña_resultados.agregar_resultado("=" * 50)
-        self.pestaña_resultados.agregar_resultado(f"Política seleccionada: {politica}")
-        self.pestaña_resultados.agregar_resultado("Parámetros del sistema:")
-        self.pestaña_resultados.agregar_resultado(f"  • TIP: {parametros['tip']}")
-        self.pestaña_resultados.agregar_resultado(f"  • TFP: {parametros['tfp']}")
-        self.pestaña_resultados.agregar_resultado(f"  • TCP: {parametros['tcp']}")
-        if parametros['quantum'] > 0:
-            self.pestaña_resultados.agregar_resultado(f"  • Quantum: {parametros['quantum']}")
-        self.pestaña_resultados.agregar_resultado(f"Procesos a simular: {len(self.procesos_cargados)}")
-        self.pestaña_resultados.agregar_resultado("")
+        # Simular datos de ejemplo para mostrar el diseño
+        datos_procesos = []
+        tiempo_total = 0
         
-        # Simular eventos básicos
-        self.pestaña_resultados.agregar_resultado("EVENTOS DE LA SIMULACIÓN:")
-        self.pestaña_resultados.agregar_resultado("-" * 30)
+        for i, proceso in enumerate(self.procesos_cargados):
+            # Calcular tiempos de ejemplo
+            tiempo_arribo = proceso['tiempo_arribo']
+            tiempo_ejecucion = proceso['duracion_rafaga_cpu']
+            tiempo_fin = tiempo_arribo + tiempo_ejecucion + parametros['tcp'] + parametros['tfp']
+            tiempo_retorno = tiempo_fin - tiempo_arribo
+            tiempo_retorno_normalizado = tiempo_retorno / tiempo_ejecucion if tiempo_ejecucion > 0 else 0
+            tiempo_estado_listo = max(0, tiempo_retorno - tiempo_ejecucion)
+            
+            datos_procesos.append({
+                'nombre': proceso['nombre'],
+                'tiempo_retorno': tiempo_retorno,
+                'tiempo_retorno_normalizado': round(tiempo_retorno_normalizado, 2),
+                'tiempo_estado_listo': tiempo_estado_listo
+            })
+            
+            tiempo_total = max(tiempo_total, tiempo_fin)
         
-        tiempo_actual = 0
-        for proceso in self.procesos_cargados:
-            self.pestaña_resultados.agregar_resultado(f"[{tiempo_actual}] Arriba proceso {proceso['nombre']}")
-            tiempo_actual += parametros['tip']
-            self.pestaña_resultados.agregar_resultado(f"[{tiempo_actual}] Proceso {proceso['nombre']} incorporado al sistema")
-            tiempo_actual += parametros['tcp']
-            self.pestaña_resultados.agregar_resultado(f"[{tiempo_actual}] Proceso {proceso['nombre']} comienza ejecución")
-            tiempo_actual += proceso['duracion_rafaga_cpu']
-            self.pestaña_resultados.agregar_resultado(f"[{tiempo_actual}] Proceso {proceso['nombre']} completa ráfaga de CPU")
-            tiempo_actual += parametros['tfp']
-            self.pestaña_resultados.agregar_resultado(f"[{tiempo_actual}] Proceso {proceso['nombre']} terminado")
-            self.pestaña_resultados.agregar_resultado("")
+        # Calcular estadísticas de la tanda
+        tiempos_retorno = [p['tiempo_retorno'] for p in datos_procesos]
+        tiempo_medio_retorno = sum(tiempos_retorno) / len(tiempos_retorno) if tiempos_retorno else 0
         
-        self.pestaña_resultados.agregar_resultado(f"Tiempo total de simulación: {tiempo_actual} unidades")
-        self.pestaña_resultados.agregar_resultado("Simulación completada (ejemplo básico)")
-        self.pestaña_resultados.agregar_resultado("")
-        self.pestaña_resultados.agregar_resultado("Para ver resultados reales, conecta tu lógica de simulación")
+        # Calcular uso de CPU (ejemplo)
+        tiempo_cpu_procesos = sum(proceso['duracion_rafaga_cpu'] for proceso in self.procesos_cargados)
+        tiempo_cpu_so = len(self.procesos_cargados) * parametros['tcp']
+        tiempo_cpu_desocupada = max(0, tiempo_total - tiempo_cpu_procesos - tiempo_cpu_so)
+        
+        # Actualizar la interfaz con los resultados
+        self.pestaña_resultados.actualizar_resultados_procesos(datos_procesos)
+        self.pestaña_resultados.actualizar_resultados_tanda(tiempo_total, tiempo_medio_retorno)
+        self.pestaña_resultados.actualizar_resultados_cpu(
+            f"{tiempo_cpu_desocupada} ({tiempo_cpu_desocupada/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
+            f"{tiempo_cpu_so} ({tiempo_cpu_so/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
+            f"{tiempo_cpu_procesos} ({tiempo_cpu_procesos/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)"
+        )
     
     def _limpiar_resultados(self):
         """Limpia todos los resultados."""
         self.pestaña_resultados.limpiar_resultados()
         self.pestaña_gantt.limpiar_gantt()
-        self.pestaña_estadisticas.limpiar_estadisticas()

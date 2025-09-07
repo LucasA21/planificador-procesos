@@ -103,6 +103,20 @@ test = ["Pillow", "contourpy[test-no-images]", "matplotlib"]
 test-no-images = ["pytest", "pytest-cov", "pytest-rerunfailures", "pytest-xdist", "wurlitzer"]
 
 [[package]]
+name = "ctktable"
+version = "1.1"
+description = "Customtkinter Table widget"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "CTkTable-1.1-py3-none-any.whl", hash = "sha256:a2615004bfb138618001c8b5fbf32accbd0142098cae4fb98d3043ae4e29b4d1"},
+    {file = "CTkTable-1.1.tar.gz", hash = "sha256:5c749124a888a17d129abb3d0afc9330c7dd5eb02e3bda8ffc6ff7b91461b076"},
+]
+
+[package.dependencies]
+customtkinter = "*"
+
+[[package]]
 name = "customtkinter"
 version = "5.2.2"
 description = "Create modern looking GUIs with Python"
@@ -790,4 +804,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.12,<3.15"
-content-hash = "908fb22e392ed84dd1de17732b4256aa50d1ca5c7126e7c3ef59634f04a7d099"
+content-hash = "0d61935e72b8b4a5fe3a58312520735e38dc06ef156f2fef7320a95ff8939a03"
