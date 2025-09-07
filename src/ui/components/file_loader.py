@@ -172,3 +172,21 @@ class CargadorArchivos(ctk.CTkFrame):
     def establecer_callback(self, callback):
         """Establece el callback cuando se carga un archivo."""
         self.callback_archivo_cargado = callback
+    
+    def actualizar_escalado(self, nuevo_factor_escala):
+        """Actualiza el escalado del componente dinámicamente."""
+        self.factor_escala = nuevo_factor_escala
+        
+        # Actualizar elementos principales
+        if hasattr(self, 'boton_cargar'):
+            self.boton_cargar.configure(
+                height=int(45 * self.factor_escala),
+                corner_radius=int(12 * self.factor_escala),
+                font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
+            )
+        
+        if hasattr(self, 'label_archivo'):
+            self.label_archivo.configure(
+                font=ctk.CTkFont(size=int(13 * self.factor_escala)),
+                height=int(35 * self.factor_escala)
+            )

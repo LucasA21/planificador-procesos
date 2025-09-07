@@ -333,3 +333,33 @@ class PestañaResultados(ctk.CTkFrame):
             text_color="gray"
         )
         mensaje_label.grid(row=0, column=0, columnspan=4, pady=int(20 * self.factor_escala), sticky="ew")
+    
+    def actualizar_escalado(self, nuevo_factor_escala):
+        """Actualiza el escalado del componente dinámicamente."""
+        self.factor_escala = nuevo_factor_escala
+        
+        # Actualizar elementos principales
+        if hasattr(self, 'label_tr'):
+            self.label_tr.configure(
+                font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
+            )
+        
+        if hasattr(self, 'label_tmr'):
+            self.label_tmr.configure(
+                font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
+            )
+        
+        if hasattr(self, 'label_cpu_desocupada'):
+            self.label_cpu_desocupada.configure(
+                font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
+            )
+        
+        if hasattr(self, 'label_cpu_so'):
+            self.label_cpu_so.configure(
+                font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
+            )
+        
+        if hasattr(self, 'label_cpu_procesos'):
+            self.label_cpu_procesos.configure(
+                font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
+            )

@@ -188,3 +188,22 @@ class EntradaParametros(ctk.CTkFrame):
                 return False, f"El parámetro {nombre_param} debe ser un número entero"
         
         return True, "Todos los parámetros son válidos"
+    
+    def actualizar_escalado(self, nuevo_factor_escala):
+        """Actualiza el escalado del componente dinámicamente."""
+        self.factor_escala = nuevo_factor_escala
+        
+        # Actualizar elementos principales
+        for nombre_param, entrada in self.entradas.items():
+            entrada.configure(
+                height=int(35 * self.factor_escala),
+                corner_radius=int(8 * self.factor_escala),
+                font=ctk.CTkFont(size=int(14 * self.factor_escala))
+            )
+        
+        for nombre_param, indicador in self.indicadores.items():
+            indicador.configure(
+                width=int(8 * self.factor_escala),
+                height=int(8 * self.factor_escala),
+                corner_radius=int(4 * self.factor_escala)
+            )

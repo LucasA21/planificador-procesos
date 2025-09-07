@@ -161,3 +161,25 @@ class PestañaGantt(ctk.CTkFrame):
         """Limpia el diagrama de Gantt."""
         self.ax_gantt.clear()
         self._crear_gantt_ejemplo()
+    
+    def actualizar_escalado(self, nuevo_factor_escala):
+        """Actualiza el escalado del componente dinámicamente."""
+        self.factor_escala = nuevo_factor_escala
+        
+        # Actualizar figura de matplotlib
+        if hasattr(self, 'figura_gantt'):
+            fig_width = int(10 * self.factor_escala)
+            fig_height = int(5 * self.factor_escala)
+            self.figura_gantt.set_size_inches(fig_width, fig_height)
+            
+            # Actualizar fuentes del gráfico
+            if hasattr(self, 'ax_gantt'):
+                self.ax_gantt.set_title("Diagrama de Gantt - Simulación de Planificación", 
+                                       color="white", fontsize=int(16 * self.factor_escala), fontweight='bold', pad=20)
+                self.ax_gantt.set_xlabel("Tiempo (unidades)", color="white", fontsize=int(14 * self.factor_escala), fontweight='bold')
+                self.ax_gantt.set_ylabel("Procesos", color="white", fontsize=int(14 * self.factor_escala), fontweight='bold')
+                self.ax_gantt.tick_params(colors="white", labelsize=int(12 * self.factor_escala))
+                
+                # Redibujar canvas
+                if hasattr(self, 'canvas_gantt'):
+                    self.canvas_gantt.draw()

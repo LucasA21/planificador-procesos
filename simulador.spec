@@ -25,6 +25,7 @@ a = Analysis(
         'customtkinter',
         'matplotlib',
         'numpy',
+        'screeninfo',
     ],
     hookspath=[],
     hooksconfig={},

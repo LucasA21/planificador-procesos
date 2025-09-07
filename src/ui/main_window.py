@@ -45,22 +45,45 @@ class VentanaPrincipal(ctk.CTk):
     
     def _configurar_escalado(self):
         """Configura el escalado dinámico basado en la resolución de pantalla."""
-        # Obtener resolución de pantalla
-        root = tk.Tk()
-        root.withdraw()
-        ancho_pantalla = root.winfo_screenwidth()
-        alto_pantalla = root.winfo_screenheight()
-        root.destroy()
+        # Obtener resolución de la pantalla principal
+        ancho_pantalla = self._obtener_ancho_pantalla_principal()
         
-        if ancho_pantalla >= 3840:  # 4K
-            self.factor_escala = 2.0  # Aumentado de 1.5 a 2.0
-        elif ancho_pantalla >= 2560:  # 2K/QHD (3K)
-            self.factor_escala = 1.8  # Aumentado de 1.3 a 1.8
-        elif ancho_pantalla >= 1920:  # Full HD
-            self.factor_escala = 1.2  # Aumentado de 1.0 a 1.2
+        # Calcular factor de escala basado en resolución
+        self._calcular_factor_escala(ancho_pantalla)
+        
+        # Aplicar escalado
+        self._aplicar_escalado()
+    
+    def _obtener_ancho_pantalla_principal(self):
+        """Obtiene el ancho de la pantalla principal usando screeninfo."""
+        from screeninfo import get_monitors
+        monitors = get_monitors()
+        
+        # Buscar el monitor principal
+        for monitor in monitors:
+            if monitor.is_primary:
+                return monitor.width
+        
+        # Si no hay monitor marcado como principal, usar el primero
+        if monitors:
+            return monitors[0].width
+        
+        # Si no hay monitores detectados, usar 1920 como fallback
+        return 1920
+    
+    def _calcular_factor_escala(self, ancho_pantalla):
+        """Calcula el factor de escala basado en la resolución de pantalla."""
+        if ancho_pantalla >= 3840:
+            self.factor_escala = 2.0
+        elif ancho_pantalla >= 2560:
+            self.factor_escala = 1.4 
+        elif ancho_pantalla >= 1920:
+            self.factor_escala = 1 
         else:  # HD o menor
-            self.factor_escala = 1.0  # Aumentado de 0.8 a 1.0
-        
+            self.factor_escala = 0.9
+    
+    def _aplicar_escalado(self):
+        """Aplica el escalado calculado a todos los elementos de la interfaz."""
         # Calcular dimensiones de ventana
         self.ancho_ventana = int(1800 * self.factor_escala)
         self.alto_ventana = int(1000 * self.factor_escala)
@@ -92,6 +115,64 @@ class VentanaPrincipal(ctk.CTk):
             "radius_large": int(12 * self.factor_escala),
             "radius_xlarge": int(16 * self.factor_escala),
         }
+    
+    def _recalcular_escalado(self):
+        """Recalcula el escalado basado en la resolución actual."""
+        ancho_pantalla = self.winfo_screenwidth()
+        self._calcular_factor_escala(ancho_pantalla)
+        
+        # Aplicar nuevo escalado
+        self._aplicar_escalado()
+        
+        # Redimensionar ventana
+        self.geometry(f"{self.ancho_ventana}x{self.alto_ventana}")
+        
+        # Actualizar todos los componentes
+        self._actualizar_escalado_componentes()
+    
+    def _actualizar_escalado_componentes(self):
+        """Actualiza el escalado de todos los componentes existentes."""
+        # Actualizar sidebar
+        if hasattr(self, 'sidebar'):
+            self.sidebar.configure(
+                width=int(420 * self.factor_escala),
+                corner_radius=self.bordes["radius_xlarge"]
+            )
+        
+        # Actualizar botón de simulación
+        if hasattr(self, 'boton_simular_header'):
+            self.boton_simular_header.configure(
+                height=int(60 * self.factor_escala),
+                corner_radius=int(12 * self.factor_escala),
+                font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold")
+            )
+        
+        # Actualizar botones de pestañas
+        if hasattr(self, 'boton_tab_resultados'):
+            self.boton_tab_resultados.configure(
+                height=int(40 * self.factor_escala),
+                corner_radius=self.bordes["radius_small"],
+                font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
+            )
+        
+        if hasattr(self, 'boton_tab_gantt'):
+            self.boton_tab_gantt.configure(
+                height=int(40 * self.factor_escala),
+                corner_radius=self.bordes["radius_small"],
+                font=ctk.CTkFont(size=int(14 * self.factor_escala))
+            )
+        
+        # Notificar a los componentes que actualicen su escalado
+        if hasattr(self, 'cargador_archivos'):
+            self.cargador_archivos.actualizar_escalado(self.factor_escala)
+        if hasattr(self, 'selector_politicas'):
+            self.selector_politicas.actualizar_escalado(self.factor_escala)
+        if hasattr(self, 'entrada_parametros'):
+            self.entrada_parametros.actualizar_escalado(self.factor_escala)
+        if hasattr(self, 'pestaña_resultados'):
+            self.pestaña_resultados.actualizar_escalado(self.factor_escala)
+        if hasattr(self, 'pestaña_gantt'):
+            self.pestaña_gantt.actualizar_escalado(self.factor_escala)
     
     def _crear_componentes(self):
         """Crea todos los componentes de la interfaz."""
@@ -409,3 +490,4 @@ class VentanaPrincipal(ctk.CTk):
         """Limpia todos los resultados."""
         self.pestaña_resultados.limpiar_resultados()
         self.pestaña_gantt.limpiar_gantt()
+    

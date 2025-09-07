@@ -72,3 +72,17 @@ class SelectorPoliticas(ctk.CTkFrame):
     def establecer_callback(self, callback):
         """Establece el callback cuando cambia la política."""
         self.callback_cambio_politica = callback
+    
+    def actualizar_escalado(self, nuevo_factor_escala):
+        """Actualiza el escalado del componente dinámicamente."""
+        self.factor_escala = nuevo_factor_escala
+        
+        # Actualizar elementos principales
+        if hasattr(self, 'menu_politica'):
+            self.menu_politica.configure(
+                width=int(300 * self.factor_escala),
+                height=int(50 * self.factor_escala),
+                corner_radius=int(12 * self.factor_escala),
+                font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold"),
+                dropdown_font=ctk.CTkFont(size=int(24 * self.factor_escala), weight="normal")
+            )
