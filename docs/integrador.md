@@ -95,3 +95,11 @@ Debe registrar todos los eventos del sistema con sus tiempos:
 - **Tiempo de retorno normalizado (TRn)**: TRp dividido por el tiempo efectivo de CPU utilizado
 - **Tiempo de retorno de la tanda (TRt)**: Desde que arriba el primer proceso hasta que se realiza el último TFP
 - **Tiempo Medio de retorno de la tanda (TMRt)**: Suma de los TRp dividido por la cantidad de procesos
+
+
+### A tener en cuenta
+
+
+- Cada proceso "NUEVO" tiene que pagar una cuota de TIP (tiempo de ingreso del proceso) y solo lo paga cuando entra por primera vez al sistema, este tiempo que paga lo va a determinar el TIP que ingresemos en la interfaz, por otro lado cada vez que el CPU elije cambiar de un proceso a otro se paga un TCP un tiempo de conmutacion, que tambien lo definimos en la interfaz. Por ultimo cuando un proceso termina tambien consume un TFP (tiempo de finalizacion del proceso), que tambien lo definimos en la interfaz. Es muy importante tener en cuenta que mientras se esta consumiendo alguno de estos 3 tiempos la cpu no puede ejecutarse, debe esperar que se termine de consumir el tiempo.
+
+Muy importante tambien, el tiempo de retorno es el tiempo de finalizacion del proceso (al tiempo de finalizacion hay que sumarle el TFP tambien) menos el tiempo de arribo, en el caso de que el proceso 5 termine en el tiempo 36, y tenga un arrivo de 10, el tiempo de retorno seria 26

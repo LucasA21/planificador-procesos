@@ -15,8 +15,8 @@ class Proceso:
         self.tiempo_cpu_total = rafagas_cpu * duracion_rafagas_cpu
         self.rafagas_io = rafagas_cpu - 1
 
-        def __str__(self):
-            return f"Proceso {self.nombre}"
+    def __str__(self):
+        return f"Proceso {self.nombre}"
 
-        def __repr__(self):
-            return f"Proceso '{self.nombre}', self.tiempo_arribo"
+    def __repr__(self):
+        return f"Proceso '{self.nombre}', arribo: {self.tiempo_arribo}"
