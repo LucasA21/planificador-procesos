@@ -76,7 +76,7 @@ class VentanaPrincipal(ctk.CTk):
         if ancho_pantalla >= 3840:
             self.factor_escala = 2.0
         elif ancho_pantalla >= 2560:
-            self.factor_escala = 1.4 
+            self.factor_escala = 1.8 
         elif ancho_pantalla >= 1920:
             self.factor_escala = 1 
         else:  # HD o menor
