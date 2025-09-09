@@ -94,7 +94,7 @@ class Simulador:
         if procesos_terminados:
             tiempos_retorno = [p.tiempo_retorno for p in procesos_terminados]
             tiempo_medio_retorno = sum(tiempos_retorno) / len(tiempos_retorno)
-            tiempo_total = max(tiempos_retorno)
+            tiempo_total = self.algoritmo_actual.tiempo_actual
         else:
             tiempo_medio_retorno = 0
             tiempo_total = 0

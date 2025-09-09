@@ -5,7 +5,6 @@ from .components.file_loader import CargadorArchivos
 from .components.policy_selector import SelectorPoliticas
 from .components.parameter_input import EntradaParametros
 from .components.results_tab import PestañaResultados
-from .components.gantt_tab import PestañaGantt
 
 class VentanaPrincipal(ctk.CTk):
     
@@ -26,7 +25,6 @@ class VentanaPrincipal(ctk.CTk):
         
         # Variables de estado
         self.procesos_cargados = []
-        self.tab_actual = "resultados"
         self.sidebar_colapsado = False
         
         # Configurar grid principal - 3 columnas
@@ -147,20 +145,6 @@ class VentanaPrincipal(ctk.CTk):
                 font=ctk.CTkFont(size=int(16 * self.factor_escala), weight="bold")
             )
         
-        # Actualizar botones de pestañas
-        if hasattr(self, 'boton_tab_resultados'):
-            self.boton_tab_resultados.configure(
-                height=int(40 * self.factor_escala),
-                corner_radius=self.bordes["radius_small"],
-                font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
-            )
-        
-        if hasattr(self, 'boton_tab_gantt'):
-            self.boton_tab_gantt.configure(
-                height=int(40 * self.factor_escala),
-                corner_radius=self.bordes["radius_small"],
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
         
         # Notificar a los componentes que actualicen su escalado
         if hasattr(self, 'cargador_archivos'):
@@ -171,8 +155,6 @@ class VentanaPrincipal(ctk.CTk):
             self.entrada_parametros.actualizar_escalado(self.factor_escala)
         if hasattr(self, 'pestaña_resultados'):
             self.pestaña_resultados.actualizar_escalado(self.factor_escala)
-        if hasattr(self, 'pestaña_gantt'):
-            self.pestaña_gantt.actualizar_escalado(self.factor_escala)
     
     def _crear_componentes(self):
         """Crea todos los componentes de la interfaz."""
@@ -260,7 +242,7 @@ class VentanaPrincipal(ctk.CTk):
     
     
     def _crear_area_principal(self):
-        """Crea el área principal derecha con pestañas de resultados."""
+        """Crea el área principal derecha con la pestaña de resultados."""
         # Frame principal del área derecha
         self.area_principal = ctk.CTkFrame(
             self, 
@@ -271,78 +253,19 @@ class VentanaPrincipal(ctk.CTk):
         self.area_principal.grid_columnconfigure(0, weight=1)
         self.area_principal.grid_rowconfigure(0, weight=1)
         
-        # Crear sistema de pestañas directamente
-        self._crear_sistema_pestañas()
+        # Crear directamente la pestaña de resultados
+        self._crear_pestaña_resultados()
     
-    def _crear_sistema_pestañas(self):
-        """Crea el sistema de pestañas para los resultados."""
-        # Frame para las pestañas con el color gris de fondo
-        frame_tabs = ctk.CTkFrame(
-            self.area_principal, 
-            corner_radius=self.bordes["radius_large"],
-            border_width=0  # Sin borde para eliminar la línea molesta
-        )
-        frame_tabs.grid(row=0, column=0, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
-        frame_tabs.grid_columnconfigure(0, weight=1)
-        frame_tabs.grid_rowconfigure(1, weight=1)
-        
-        # Botones de pestañas
-        self._crear_botones_pestañas(frame_tabs)
-        
-        # Contenido de las pestañas
-        self._crear_contenido_pestañas(frame_tabs)
-    
-    def _crear_botones_pestañas(self, parent):
-        """Crea los botones de navegación entre pestañas."""
-        # Frame para los botones de pestañas
-        tabs_frame = ctk.CTkFrame(
-            parent,
-            fg_color="transparent",
-            height=int(50 * self.factor_escala)
-        )
-        tabs_frame.grid(row=0, column=0, sticky="ew", padx=self.espaciado["lg"], pady=(self.espaciado["lg"], 0))
-        tabs_frame.grid_columnconfigure((0, 1), weight=1)
-        
-        # Botón pestaña resultados
-        self.boton_tab_resultados = ctk.CTkButton(
-            tabs_frame,
-            text="📊 Resultados de Simulación",
-            command=lambda: self._cambiar_tab("resultados"),
-            height=int(40 * self.factor_escala),
-            corner_radius=self.bordes["radius_small"],
-            font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
-        )
-        self.boton_tab_resultados.grid(row=0, column=0, pady=(0, 0), padx=(0, 5), sticky="ew")
-        
-        # Botón pestaña Gantt
-        self.boton_tab_gantt = ctk.CTkButton(
-            tabs_frame,
-            text="📈 Diagrama Gantt",
-            command=lambda: self._cambiar_tab("gantt"),
-            height=int(40 * self.factor_escala),
-            corner_radius=self.bordes["radius_small"],
-            fg_color="transparent",
-            font=ctk.CTkFont(size=int(14 * self.factor_escala))
-        )
-        self.boton_tab_gantt.grid(row=0, column=1, pady=(0, 0), padx=(5, 0), sticky="ew")
-    
-    def _crear_contenido_pestañas(self, parent):
-        """Crea el contenido de las pestañas."""
-        # Pestaña de resultados
+    def _crear_pestaña_resultados(self):
+        """Crea la pestaña de resultados directamente."""
+        # Crear pestaña de resultados
         self.pestaña_resultados = PestañaResultados(
-            parent, 
+            self.area_principal, 
             factor_escala=self.factor_escala
         )
-        self.pestaña_resultados.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
-        self.pestaña_resultados.mostrar_mensaje_inicial()
-        
-        # Pestaña de Gantt
-        self.pestaña_gantt = PestañaGantt(
-            parent, 
-            factor_escala=self.factor_escala
-        )
-        self.pestaña_gantt.grid(row=1, column=0, columnspan=2, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
-        self.pestaña_gantt.grid_remove()  # Ocultar inicialmente
+        self.pestaña_resultados.grid(row=0, column=0, sticky="nsew", padx=self.espaciado["lg"], pady=self.espaciado["lg"])
+    
+    
     
     def _configurar_callbacks(self):
         """Configura los callbacks entre componentes."""
@@ -396,33 +319,6 @@ class VentanaPrincipal(ctk.CTk):
         # Si todo está bien, habilitar el botón
         self.boton_simular_header.configure(state="normal")
     
-    def _cambiar_tab(self, tab):
-        """Cambia entre las pestañas de resultados."""
-        self.tab_actual = tab
-        
-        # Ocultar todas las pestañas
-        self.pestaña_resultados.grid_remove()
-        self.pestaña_gantt.grid_remove()
-        
-        # Mostrar la pestaña seleccionada
-        if tab == "resultados":
-            self.pestaña_resultados.grid()
-            self.boton_tab_resultados.configure(
-                font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
-            )
-            self.boton_tab_gantt.configure(
-                fg_color="transparent",
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
-        elif tab == "gantt":
-            self.pestaña_gantt.grid()
-            self.boton_tab_resultados.configure(
-                fg_color="transparent",
-                font=ctk.CTkFont(size=int(14 * self.factor_escala))
-            )
-            self.boton_tab_gantt.configure(
-                font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold")
-            )
     
     def _simular(self):
         """Ejecuta la simulación."""
@@ -438,17 +334,14 @@ class VentanaPrincipal(ctk.CTk):
         parametros = self.entrada_parametros.obtener_todos_parametros()
         politica = self.selector_politicas.obtener_politica_seleccionada()
         
-        # Cambiar a la pestaña de resultados
-        self._cambiar_tab("resultados")
+        # Limpiar resultados anteriores
+        self.pestaña_resultados.limpiar_resultados()
         
         # Ejecutar simulación (por ahora solo muestra información)
         self._ejecutar_simulacion_basica(politica, parametros)
     
     def _ejecutar_simulacion_basica(self, politica, parametros):
         """Ejecuta la simulación usando el algoritmo seleccionado."""
-        # Limpiar resultados anteriores
-        self.pestaña_resultados.limpiar_resultados()
-        self.pestaña_gantt.limpiar_gantt()
         
         # Importar el simulador
         from ..simulador.simulador import Simulador
@@ -482,16 +375,8 @@ class VentanaPrincipal(ctk.CTk):
                 resultados['cpu_procesos']
             )
             
-            # Actualizar diagrama de Gantt
-            if resultados['gantt']['procesos']:
-                self.pestaña_gantt.actualizar_gantt(
-                    resultados['gantt']['procesos'],
-                    resultados['gantt']['inicios'],
-                    resultados['gantt']['duraciones']
-                )
     
     def _limpiar_resultados(self):
         """Limpia todos los resultados."""
         self.pestaña_resultados.limpiar_resultados()
-        self.pestaña_gantt.limpiar_gantt()
     
