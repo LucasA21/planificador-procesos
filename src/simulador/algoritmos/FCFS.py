@@ -15,7 +15,7 @@ de cpu, ejemplo: un proceso puede ejecutar a la vez 3 rafagas de cpu y el tiempo
 - Cada vez que se se ejecute un proceso, se debe consumir el TCP, esto se consume cada vez que el planificador cambia de un proceso a otro (al principio, 
 cuando un proceso es nuevo es decir pasa de nuevo a listo, el tcp no se consume, si no que se consume el tip).
 """
-from proceso import Proceso
+from ..proceso import Proceso
 
 
 class FCFS:
@@ -72,8 +72,12 @@ class FCFS:
 
 
     def ejecutar(self):
+        # Límite de seguridad para evitar bucles infinitos
+        tiempo_maximo = 1000
+        iteraciones = 0
 
-        while self.hay_procesos_pendientes():
+        while self.hay_procesos_pendientes() and iteraciones < tiempo_maximo:
+            iteraciones += 1
 
             self.procesar_llegadas()
 
@@ -81,6 +85,10 @@ class FCFS:
             if self.procesar_tiempo_bloqueo():
                 self.tiempo_actual += 1
                 continue
+
+            # Incrementar tiempo de espera para procesos en cola de listos
+            for proceso in self.cola_listos:
+                proceso.tiempo_en_listo += 1
 
             # Si no hay proceso ejecutandose, selecciona uno
             if self.proceso_actual is None:
@@ -91,12 +99,14 @@ class FCFS:
                 self.ejecutar_proceso_actual()
 
             # Procesar procesos bloqueados
-
             self.procesar_procesos_bloqueados()
 
             # Avanzar una unidad de tiempo
-
             self.tiempo_actual += 1
+        
+        if iteraciones >= tiempo_maximo:
+            print(f"⚠️ Advertencia: Simulación terminada por límite de tiempo ({tiempo_maximo} iteraciones)")
+            print(f"Estado final - Tiempo: {self.tiempo_actual}, Iteraciones: {iteraciones}")
 
 
     def ejecutar_proceso_actual(self):
@@ -118,23 +128,15 @@ class FCFS:
         if len(self.cola_listos) > 0:
             # Agarrar el primer proceso de la cola
             self.proceso_actual = self.cola_listos.pop(0)
-
             # Aplicar TIP o TCP segun corresponda
             if self.proceso_actual.proceso_nuevo:
                 self.aplicar_tip()
                 self.proceso_actual.proceso_nuevo = False
             else:
                 self.aplicar_tcp()
-
-            self.proceso_actual.estado = "ejecutando"
-
-            # Registrar evento
-            self.resultados.append({
-                'tiempo': self.tiempo_actual,
-                'proceso': self.proceso_actual.nombre,
-                'evento': 'inicio ejecucion',
-                'estado': 'ejecutando'
-            })
+            
+            # NO cambiar estado a "ejecutando" ni registrar evento aquí
+            # El proceso solo empezará a ejecutarse después de que termine TIP/TCP
 
     
     def hay_procesos_pendientes(self):
@@ -146,14 +148,18 @@ class FCFS:
             - hay procesos que aun no llegaron a su tiempo total
             de ejecucion
         """
-        return (len(self.cola_listos) >  0 or 
+        resultado = (len(self.cola_listos) > 0 or 
         len(self.procesos_bloqueados) > 0 or (self.proceso_actual is not None) or
-        (any(p.tiempo_arrivo > self.tiempo_actual for p in self.procesos)))
+        (any(p.tiempo_arrivo > self.tiempo_actual for p in self.procesos)) or
+        (any(p.estado == "terminando" for p in self.procesos)))
+        
+        
+        return resultado
 
 
     def bloquear_proceso(self):
-        # Reiniciar duracion rafaga de CPU para la siguiente vez
-        self.proceso_actual.duracion_rafagas_cpu = self.proceso_actual.get_duracion_rafagas_cpu()
+        # Reiniciar duracion rafaga de I/O para la siguiente vez
+        self.proceso_actual.duracion_rafagas_io = self.proceso_actual.get_duracion_rafagas_io()
         
         self.proceso_actual.estado = "bloqueado"
 
@@ -172,9 +178,10 @@ class FCFS:
     def terminar_proceso(self):
         if self.tiempo_tfp > 0:
             self.aplicar_tfp()
-            self.proceso_actual.estado = "terminado"
+            self.proceso_actual.estado = "terminando"
+            self.procesos_terminados.append(self.proceso_actual)
         else: 
-            self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual + self.tiempo_tfp)
+            self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual)
             self.proceso_actual.estado = "terminado"
             self.procesos_terminados.append(self.proceso_actual)
             self.resultados.append({
@@ -201,8 +208,12 @@ class FCFS:
             if proceso.duracion_rafagas_io == 0:
                 procesos_que_terminaron_io.append(proceso)
                 proceso.estado = "listo"
+                
+                # Reiniciar duracion de CPU para la siguiente ejecución
+                proceso.duracion_rafagas_cpu = proceso.get_duracion_rafagas_cpu()
 
-                self.insertar_ordenado(proceso)
+                # IMPORTANTE: Los procesos que vuelven de I/O van al FINAL de la cola
+                self.cola_listos.append(proceso)
 
                 # Registrar evento
                 self.resultados.append({
@@ -268,6 +279,15 @@ class FCFS:
             if self.tiempo_restante_bloqueo == 0:
                 if self.tipo_bloqueo == 'tfp':
                     self.finalizar_proceso_completamente()
+                elif self.tipo_bloqueo in ['tip', 'tcp'] and self.proceso_actual is not None:
+                    # Cuando termina TIP o TCP, el proceso puede empezar a ejecutarse
+                    self.proceso_actual.estado = "ejecutando"
+                    self.resultados.append({
+                        'tiempo': self.tiempo_actual,
+                        'proceso': self.proceso_actual.nombre,
+                        'evento': 'inicio ejecucion',
+                        'estado': 'ejecutando'
+                    })
 
                 self.resultados.append({
                     'tiempo': self.tiempo_actual,
@@ -279,17 +299,19 @@ class FCFS:
             
             return True # Aun esta bloqueado
         return False # Ya termin0 el bloqueo
-
+    
     def finalizar_proceso_completamente(self):
+        """Finaliza completamente un proceso después del TFP."""
         # Buscar el proceso que estaba terminando
         for proceso in self.procesos_terminados:
             if proceso.estado == "terminando":
                 proceso.calcular_tiempo_retorno(self.tiempo_actual)
                 proceso.estado = "terminado"
-
+                
                 self.resultados.append({
                     'tiempo': self.tiempo_actual,
                     'proceso': proceso.nombre,
                     'evento': 'terminacion',
                     'estado': 'terminado'
                 })
+                break

@@ -150,10 +150,10 @@ class CargadorArchivos(ctk.CTkFrame):
                 proceso = {
                     'nombre': str(proceso_data['nombre']),
                     'tiempo_arribo': int(proceso_data['tiempo_arribo']),
-                    'rafagas_cpu': int(proceso_data['cantidad_rafagas_cpu']),
+                    'cantidad_rafagas_cpu': int(proceso_data['cantidad_rafagas_cpu']),
                     'duracion_rafaga_cpu': int(proceso_data['duracion_rafaga_cpu']),
-                    'duracion_rafaga_io': int(proceso_data['duracion_rafaga_es']),
-                    'prioridad': int(proceso_data['prioridad_externa'])
+                    'duracion_rafaga_es': int(proceso_data['duracion_rafaga_es']),
+                    'prioridad_externa': int(proceso_data['prioridad_externa'])
                 }
                 self.procesos_cargados.append(proceso)
             

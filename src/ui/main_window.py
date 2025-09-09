@@ -442,49 +442,50 @@ class VentanaPrincipal(ctk.CTk):
         self._ejecutar_simulacion_basica(politica, parametros)
     
     def _ejecutar_simulacion_basica(self, politica, parametros):
-        """Ejecuta una simulación básica de ejemplo."""
+        """Ejecuta la simulación usando el algoritmo seleccionado."""
         # Limpiar resultados anteriores
         self.pestaña_resultados.limpiar_resultados()
+        self.pestaña_gantt.limpiar_gantt()
         
-        # Simular datos de ejemplo para mostrar el diseño
-        datos_procesos = []
-        tiempo_total = 0
+        # Importar el simulador
+        from ..simulador.simulador import Simulador
         
-        for i, proceso in enumerate(self.procesos_cargados):
-            # Calcular tiempos de ejemplo
-            tiempo_arribo = proceso['tiempo_arribo']
-            tiempo_ejecucion = proceso['duracion_rafaga_cpu']
-            tiempo_fin = tiempo_arribo + tiempo_ejecucion + parametros['tcp'] + parametros['tfp']
-            tiempo_retorno = tiempo_fin - tiempo_arribo
-            tiempo_retorno_normalizado = tiempo_retorno / tiempo_ejecucion if tiempo_ejecucion > 0 else 0
-            tiempo_estado_listo = max(0, tiempo_retorno - tiempo_ejecucion)
+        # Crear instancia del simulador
+        simulador = Simulador()
+        
+        # Ejecutar simulación según la política seleccionada
+        if politica == "FCFS":
+            resultados = simulador.ejecutar_fcfs(
+                self.procesos_cargados,
+                parametros['tip'],
+                parametros['tcp'],
+                parametros['tfp']
+            )
+        else:
+            # Para otros algoritmos, mostrar mensaje de no implementado
+            self.pestaña_resultados.mostrar_mensaje_inicial()
+            return
+        
+        # Actualizar la interfaz con los resultados reales
+        if resultados:
+            self.pestaña_resultados.actualizar_resultados_procesos(resultados['procesos'])
+            self.pestaña_resultados.actualizar_resultados_tanda(
+                resultados['tiempo_total'], 
+                resultados['tiempo_medio_retorno']
+            )
+            self.pestaña_resultados.actualizar_resultados_cpu(
+                resultados['cpu_desocupada'],
+                resultados['cpu_so'],
+                resultados['cpu_procesos']
+            )
             
-            datos_procesos.append({
-                'nombre': proceso['nombre'],
-                'tiempo_retorno': tiempo_retorno,
-                'tiempo_retorno_normalizado': round(tiempo_retorno_normalizado, 2),
-                'tiempo_estado_listo': tiempo_estado_listo
-            })
-            
-            tiempo_total = max(tiempo_total, tiempo_fin)
-        
-        # Calcular estadísticas de la tanda
-        tiempos_retorno = [p['tiempo_retorno'] for p in datos_procesos]
-        tiempo_medio_retorno = sum(tiempos_retorno) / len(tiempos_retorno) if tiempos_retorno else 0
-        
-        # Calcular uso de CPU (ejemplo)
-        tiempo_cpu_procesos = sum(proceso['duracion_rafaga_cpu'] for proceso in self.procesos_cargados)
-        tiempo_cpu_so = len(self.procesos_cargados) * parametros['tcp']
-        tiempo_cpu_desocupada = max(0, tiempo_total - tiempo_cpu_procesos - tiempo_cpu_so)
-        
-        # Actualizar la interfaz con los resultados
-        self.pestaña_resultados.actualizar_resultados_procesos(datos_procesos)
-        self.pestaña_resultados.actualizar_resultados_tanda(tiempo_total, tiempo_medio_retorno)
-        self.pestaña_resultados.actualizar_resultados_cpu(
-            f"{tiempo_cpu_desocupada} ({tiempo_cpu_desocupada/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
-            f"{tiempo_cpu_so} ({tiempo_cpu_so/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
-            f"{tiempo_cpu_procesos} ({tiempo_cpu_procesos/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)"
-        )
+            # Actualizar diagrama de Gantt
+            if resultados['gantt']['procesos']:
+                self.pestaña_gantt.actualizar_gantt(
+                    resultados['gantt']['procesos'],
+                    resultados['gantt']['inicios'],
+                    resultados['gantt']['duraciones']
+                )
     
     def _limpiar_resultados(self):
         """Limpia todos los resultados."""

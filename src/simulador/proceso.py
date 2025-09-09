@@ -9,6 +9,10 @@ class Proceso:
         self.prioridad = prioridad
         self.estado = "nuevo"
         
+        # Guardar valores originales para cálculos
+        self.duracion_rafagas_cpu_original = int(duracion_rafagas_cpu)
+        self.duracion_rafagas_io_original = int(duracion_rafagas_io)
+        self.cantidad_rafagas_cpu_original = int(cantidad_rafagas_cpu)
         
         # Atributos de control
         self.tiempo_retorno = 0
@@ -20,11 +24,7 @@ class Proceso:
         self.proceso_nuevo = True
 
 
-    def get_estado(self):
-        return self.estado
-    
-    def set_estado(self):
-        return self.estado
+
 
     def get_tiempo_arribo(self):
         return self.tiempo_arrivo
@@ -33,10 +33,10 @@ class Proceso:
         return self.cantidad_rafagas_cpu
     
     def get_duracion_rafagas_cpu(self):
-        return self.duracion_rafagas_cpu
+        return self.duracion_rafagas_cpu_original
     
     def get_duracion_rafagas_io(self):
-        return self.duracion_rafagas_io
+        return self.duracion_rafagas_io_original
     
     def get_prioridad(self):
         return self.prioridad
@@ -52,10 +52,20 @@ class Proceso:
     
     def get_tiempo_rafaga_cpu(self):
         return self.tiempo_rafaga_cpu
+    
+    def get_estado(self):
+        return self.estado
+    
+    def set_estado(self, estado):
+        self.estado = estado
 
     def calcular_tiempo_retorno(self, tiempo_finalizacion):
         self.tiempo_retorno = tiempo_finalizacion - self.tiempo_arrivo
-        self.tiempo_retorno_normalizado = self.tiempo_retorno / (self.cantidad_rafagas_cpu * self.duracion_rafagas_cpu)
+        # Usar los valores originales para el cálculo
+        if self.duracion_rafagas_cpu_original > 0 and self.cantidad_rafagas_cpu_original > 0:
+            self.tiempo_retorno_normalizado = self.tiempo_retorno / (self.cantidad_rafagas_cpu_original * self.duracion_rafagas_cpu_original)
+        else:
+            self.tiempo_retorno_normalizado = 0
 
     def __str__(self):
         return f"Proceso {self.nombre}" 
