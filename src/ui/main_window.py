@@ -355,6 +355,9 @@ class VentanaPrincipal(ctk.CTk):
         # Parameter input callbacks
         self.entrada_parametros.establecer_callback(self._cambio_parametro)
         
+        # Configurar estado inicial del quantum (FCFS por defecto)
+        self._cambio_politica("FCFS")
+        
         # Simulation controls callbacks (solo para limpiar)
         # self.controles_simulacion.establecer_callback_limpiar(self._limpiar_resultados) # Eliminado
     

@@ -154,12 +154,17 @@ class EntradaParametros(ctk.CTkFrame):
     
     def obtener_todos_parametros(self):
         """Retorna todos los parámetros como un diccionario."""
-        return {
+        parametros = {
             "tip": self.obtener_valor_parametro("tip"),
             "tfp": self.obtener_valor_parametro("tfp"),
-            "tcp": self.obtener_valor_parametro("tcp"),
-            "quantum": self.obtener_valor_parametro("quantum")
+            "tcp": self.obtener_valor_parametro("tcp")
         }
+        
+        # Solo incluir quantum si está habilitado
+        if "quantum" in self.entradas and self.entradas["quantum"].cget("state") != "disabled":
+            parametros["quantum"] = self.obtener_valor_parametro("quantum")
+        
+        return parametros
     
     def habilitar_quantum(self, habilitar=True):
         """Habilita o deshabilita el campo quantum."""
@@ -180,6 +185,10 @@ class EntradaParametros(ctk.CTkFrame):
     def validar_parametros(self):
         """Valida que todos los parámetros sean válidos."""
         for nombre_param, entrada in self.entradas.items():
+            # Saltar validación del quantum si está deshabilitado
+            if nombre_param == "quantum" and entrada.cget("state") == "disabled":
+                continue
+                
             try:
                 valor = int(entrada.get())
                 if valor < 0:
