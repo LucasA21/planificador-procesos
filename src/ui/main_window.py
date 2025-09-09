@@ -375,6 +375,7 @@ class VentanaPrincipal(ctk.CTk):
                 resultados['cpu_procesos']
             )
             
+            
     
     def _limpiar_resultados(self):
         """Limpia todos los resultados."""

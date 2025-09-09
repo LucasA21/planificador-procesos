@@ -2,11 +2,11 @@
 Módulo de integración entre la lógica de algoritmos y la interfaz de usuario.
 """
 
-import json
 import os
 from datetime import datetime
 from .proceso import Proceso
 from .algoritmos.FCFS import FCFS
+from .exportador_pdf import ExportadorPDF
 
 class Simulador:
     """Clase que integra los algoritmos de planificación con la interfaz."""
@@ -107,8 +107,8 @@ class Simulador:
         # Procesar datos para el diagrama de Gantt
         datos_gantt = self._procesar_datos_gantt()
         
-        # Exportar eventos a archivo
-        self.exportar_eventos()
+        # Exportar reporte PDF
+        self.exportar_pdf()
 
         return {
             'procesos': datos_procesos,
@@ -165,9 +165,9 @@ class Simulador:
             'duraciones': duraciones
         }
     
-    def exportar_eventos(self):
+    def exportar_pdf(self):
         """
-        Exporta todos los eventos de la simulación a un archivo JSON.
+        Exporta un reporte PDF con los resultados de la simulación.
         """
         if not hasattr(self, 'algoritmo_actual') or not self.algoritmo_actual:
             return
@@ -178,44 +178,53 @@ class Simulador:
         
         # Generar nombre de archivo con timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"eventos_simulacion_{timestamp}.json"
+        filename = f"reporte_simulacion_{timestamp}.pdf"
         filepath = os.path.join(output_dir, filename)
         
-        # Preparar datos para exportar
-        datos_exportacion = {
-            'simulacion': {
-                'algoritmo': 'FCFS',
-                'tiempo_total': self.algoritmo_actual.tiempo_actual,
-                'fecha_simulacion': datetime.now().isoformat(),
-                'parametros': {
-                    'tip': self.algoritmo_actual.tiempo_tip,
-                    'tcp': self.algoritmo_actual.tiempo_tcp,
-                    'tfp': self.algoritmo_actual.tiempo_tfp
-                }
-            },
+        # Preparar datos para el PDF
+        datos_pdf = {
+            'tiempo_total': self.algoritmo_actual.tiempo_actual,
             'procesos': [],
-            'eventos': self.algoritmo_actual.resultados
+            'tiempo_medio_retorno': 0,
+            'cpu_desocupada': '0 (0%)',
+            'cpu_so': '0 (0%)',
+            'cpu_procesos': '0 (0%)',
+            'eventos': self.algoritmo_actual.resultados,
+            'tip': self.algoritmo_actual.tiempo_tip,
+            'tcp': self.algoritmo_actual.tiempo_tcp,
+            'tfp': self.algoritmo_actual.tiempo_tfp
         }
         
         # Agregar información de procesos
         for proceso in self.algoritmo_actual.procesos:
-            datos_exportacion['procesos'].append({
+            datos_pdf['procesos'].append({
                 'nombre': proceso.nombre,
-                'tiempo_arrivo': proceso.tiempo_arrivo,
-                'cantidad_rafagas_cpu': proceso.cantidad_rafagas_cpu_original,
-                'duracion_rafagas_cpu': proceso.duracion_rafagas_cpu_original,
-                'duracion_rafagas_io': proceso.duracion_rafagas_io_original,
-                'prioridad': proceso.prioridad,
                 'tiempo_retorno': proceso.tiempo_retorno,
                 'tiempo_retorno_normalizado': proceso.tiempo_retorno_normalizado,
-                'tiempo_en_listo': proceso.tiempo_en_listo,
-                'estado_final': proceso.estado
+                'tiempo_estado_listo': proceso.tiempo_en_listo
             })
         
-        # Exportar a archivo JSON
+        # Calcular tiempo medio de retorno
+        if datos_pdf['procesos']:
+            tiempos_retorno = [p['tiempo_retorno'] for p in datos_pdf['procesos']]
+            datos_pdf['tiempo_medio_retorno'] = sum(tiempos_retorno) / len(tiempos_retorno)
+        
+        # Calcular uso de CPU
+        tiempo_cpu_procesos = sum(p.cantidad_rafagas_cpu * p.get_duracion_rafagas_cpu() for p in self.algoritmo_actual.procesos)
+        tiempo_cpu_so = len(self.algoritmo_actual.procesos) * self.algoritmo_actual.tiempo_tcp
+        tiempo_cpu_desocupada = max(0, datos_pdf['tiempo_total'] - tiempo_cpu_procesos - tiempo_cpu_so)
+        
+        if datos_pdf['tiempo_total'] > 0:
+            datos_pdf['cpu_desocupada'] = f"{tiempo_cpu_desocupada} ({tiempo_cpu_desocupada/datos_pdf['tiempo_total']*100:.1f}%)"
+            datos_pdf['cpu_so'] = f"{tiempo_cpu_so} ({tiempo_cpu_so/datos_pdf['tiempo_total']*100:.1f}%)"
+            datos_pdf['cpu_procesos'] = f"{tiempo_cpu_procesos} ({tiempo_cpu_procesos/datos_pdf['tiempo_total']*100:.1f}%)"
+        
+        # Crear exportador PDF
+        exportador = ExportadorPDF()
+        
+        # Exportar PDF
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(datos_exportacion, f, indent=2, ensure_ascii=False)
-            print(f"✅ Eventos exportados a: {filepath}")
+            ruta_pdf = exportador.exportar_simulacion(datos_pdf, filepath)
+            print(f"✅ Reporte PDF exportado a: {ruta_pdf}")
         except Exception as e:
-            print(f"❌ Error al exportar eventos: {e}")
+            print(f"❌ Error al exportar PDF: {e}")

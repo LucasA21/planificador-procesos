@@ -235,7 +235,7 @@ class FCFS:
         # Registrar evento
         self.resultados.append({
             'tiempo': self.tiempo_actual,
-            'proceso': 'SISTEMA',
+            'proceso': self.proceso_actual.nombre,
             'evento': 'inicio_tip',
             'estado': 'bloqueado_sistema'
             
@@ -251,7 +251,7 @@ class FCFS:
         # Registrar evento
         self.resultados.append({
             'tiempo': self.tiempo_actual,
-            'proceso': 'SISTEMA',
+            'proceso': self.proceso_actual.nombre,
             'evento': 'inicio_tcp',
             'estado': 'bloqueado_sistema'
         })
@@ -266,7 +266,7 @@ class FCFS:
         # Registrar evento
         self.resultados.append({
             'tiempo': self.tiempo_actual,
-            'proceso': 'SISTEMA',
+            'proceso': self.proceso_actual.nombre,
             'evento': 'inicio_tfp',
             'estado': 'bloqueado_sistema'
         })
@@ -277,9 +277,18 @@ class FCFS:
             self.tiempo_restante_bloqueo -= 1
 
             if self.tiempo_restante_bloqueo == 0:
+                # Determinar el nombre del proceso para el evento de fin
+                nombre_proceso = None
                 if self.tipo_bloqueo == 'tfp':
+                    # Para TFP, buscar el proceso que está terminando
+                    for proceso in self.procesos_terminados:
+                        if proceso.estado == "terminando":
+                            nombre_proceso = proceso.nombre
+                            break
                     self.finalizar_proceso_completamente()
                 elif self.tipo_bloqueo in ['tip', 'tcp'] and self.proceso_actual is not None:
+                    # Para TIP y TCP, usar el proceso actual
+                    nombre_proceso = self.proceso_actual.nombre
                     # Cuando termina TIP o TCP, el proceso puede empezar a ejecutarse
                     self.proceso_actual.estado = "ejecutando"
                     self.resultados.append({
@@ -289,12 +298,14 @@ class FCFS:
                         'estado': 'ejecutando'
                     })
 
-                self.resultados.append({
-                    'tiempo': self.tiempo_actual,
-                    'proceso': 'SISTEMA',
-                    'evento': f'fin_{self.tipo_bloqueo}',
-                    'estado': 'sistema_libre'
-                })
+                # Registrar evento de fin con el nombre del proceso correcto
+                if nombre_proceso:
+                    self.resultados.append({
+                        'tiempo': self.tiempo_actual,
+                        'proceso': nombre_proceso,
+                        'evento': f'fin_{self.tipo_bloqueo}',
+                        'estado': 'sistema_libre'
+                    })
                 self.tipo_bloqueo = None
             
             return True # Aun esta bloqueado
