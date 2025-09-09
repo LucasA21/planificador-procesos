@@ -80,9 +80,9 @@ class Simulador:
         # Obtener procesos terminados
         procesos_terminados = self.algoritmo_actual.procesos_terminados
         
-        # Procesar datos por proceso
+        # Procesar datos por proceso - ordenar por nombre para mostrar P1, P2, P3, etc.
         datos_procesos = []
-        for proceso in procesos_terminados:
+        for proceso in sorted(procesos_terminados, key=lambda p: p.nombre):
             datos_procesos.append({
                 'nombre': proceso.nombre,
                 'tiempo_retorno': proceso.tiempo_retorno,

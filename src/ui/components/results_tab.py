@@ -83,42 +83,41 @@ class PestañaResultados(ctk.CTkFrame):
         )
         titulo_seccion.grid(row=0, column=0, pady=(int(20 * self.factor_escala), int(15 * self.factor_escala)), padx=int(20 * self.factor_escala), sticky="w")
         
-        # Frame para la tabla de procesos
-        tabla_frame = ctk.CTkFrame(
+        # Frame principal para la tabla con scroll
+        self.scrollable_tabla = ctk.CTkScrollableFrame(
             seccion_frame,
             corner_radius=int(8 * self.factor_escala),
-            border_width=1
+            border_width=1,
+            height=int(300 * self.factor_escala)
         )
-        tabla_frame.grid(row=1, column=0, sticky="ew", padx=int(20 * self.factor_escala), pady=(0, int(20 * self.factor_escala)))
-        tabla_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.scrollable_tabla.grid(row=1, column=0, sticky="nsew", padx=int(20 * self.factor_escala), pady=(0, int(20 * self.factor_escala)))
+        self.scrollable_tabla.grid_columnconfigure(0, weight=1)
         
-        # Encabezados de la tabla
-        headers = ["Proceso", "Tiempo de Retorno", "Tiempo de Retorno Normalizado", "Tiempo en Estado de Listo"]
-        for i, header in enumerate(headers):
-            header_label = ctk.CTkLabel(
-                tabla_frame,
-                text=header,
-                font=ctk.CTkFont(size=int(13 * self.factor_escala), weight="bold"),
-                height=int(35 * self.factor_escala),
-                anchor="center"
-            )
-            header_label.grid(row=0, column=i, padx=int(10 * self.factor_escala), pady=int(10 * self.factor_escala), sticky="ew")
-        
-        # Línea separadora
-        separador = ctk.CTkFrame(
-            tabla_frame,
-            height=int(2 * self.factor_escala),
-            corner_radius=int(1 * self.factor_escala)
+        # Frame interno para la tabla
+        self.tabla_frame = ctk.CTkFrame(
+            self.scrollable_tabla,
+            fg_color="transparent",
+            corner_radius=0
         )
-        separador.grid(row=1, column=0, columnspan=4, sticky="ew", padx=int(10 * self.factor_escala), pady=(0, int(5 * self.factor_escala)))
+        self.tabla_frame.grid(row=0, column=0, sticky="nsew")
         
-        # Frame para las filas de datos
-        self.datos_procesos_frame = ctk.CTkFrame(
-            tabla_frame,
+        self.tabla_frame.grid_columnconfigure(0, weight=1, minsize=int(120 * self.factor_escala)) 
+        self.tabla_frame.grid_columnconfigure(1, weight=1, minsize=int(120 * self.factor_escala)) 
+        self.tabla_frame.grid_columnconfigure(2, weight=1, minsize=int(120 * self.factor_escala))  
+        self.tabla_frame.grid_columnconfigure(3, weight=1, minsize=int(120 * self.factor_escala))  
+        
+        # Frame para todas las filas (encabezados + datos)
+        self.tabla_datos_frame = ctk.CTkFrame(
+            self.tabla_frame,
             fg_color="transparent"
         )
-        self.datos_procesos_frame.grid(row=2, column=0, columnspan=4, sticky="ew", padx=int(10 * self.factor_escala), pady=(0, int(10 * self.factor_escala)))
-        self.datos_procesos_frame.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.tabla_datos_frame.grid(row=0, column=0, columnspan=4, sticky="nsew")
+        
+        # Configurar anchos fijos para las columnas de datos (igual que la tabla principal)
+        self.tabla_datos_frame.grid_columnconfigure(0, weight=1, minsize=int(120 * self.factor_escala)) 
+        self.tabla_datos_frame.grid_columnconfigure(1, weight=1, minsize=int(120 * self.factor_escala)) 
+        self.tabla_datos_frame.grid_columnconfigure(2, weight=1, minsize=int(120 * self.factor_escala))  
+        self.tabla_datos_frame.grid_columnconfigure(3, weight=1, minsize=int(120 * self.factor_escala))  
     
     def _crear_seccion_tanda(self):
         """Crea la sección de resultados de la tanda."""
@@ -249,50 +248,68 @@ class PestañaResultados(ctk.CTkFrame):
     def actualizar_resultados_procesos(self, datos_procesos):
         """Actualiza los resultados por proceso."""
         # Limpiar datos anteriores
-        for widget in self.datos_procesos_frame.winfo_children():
+        for widget in self.tabla_datos_frame.winfo_children():
             widget.destroy()
+        
+        # Crear encabezados como primera fila (títulos más cortos)
+        headers = ["Proceso", "Tiempo Retorno", "Tr.Normalizado", "Tiempo Listo"]
+        self._crear_fila_tabla(0, headers, "#404040", True)  # Color gris para encabezados
         
         # Agregar filas de datos
         for i, proceso in enumerate(datos_procesos):
-            # Nombre del proceso
-            nombre_label = ctk.CTkLabel(
-                self.datos_procesos_frame,
-                text=proceso.get('nombre', '--'),
-                font=ctk.CTkFont(size=int(12 * self.factor_escala)),
-                height=int(30 * self.factor_escala),
-                anchor="center"
-            )
-            nombre_label.grid(row=i, column=0, padx=int(10 * self.factor_escala), pady=int(5 * self.factor_escala), sticky="ew")
+            # Color alternado para las filas de datos
+            row_color = "#2b2b2b" if i % 2 == 0 else "#333333"
             
-            # Tiempo de Retorno
-            tr_label = ctk.CTkLabel(
-                self.datos_procesos_frame,
-                text=f"{proceso.get('tiempo_retorno', '--')}",
-                font=ctk.CTkFont(size=int(12 * self.factor_escala)),
-                height=int(30 * self.factor_escala),
-                anchor="center"
-            )
-            tr_label.grid(row=i, column=1, padx=int(10 * self.factor_escala), pady=int(5 * self.factor_escala), sticky="ew")
+            # Datos de la fila
+            datos_fila = [
+                proceso.get('nombre', '--'),
+                str(proceso.get('tiempo_retorno', '--')),
+                f"{proceso.get('tiempo_retorno_normalizado', '--'):.2f}" if proceso.get('tiempo_retorno_normalizado', '--') != '--' else '--',
+                str(proceso.get('tiempo_estado_listo', '--'))
+            ]
             
-            # Tiempo de Retorno Normalizado
-            trn_label = ctk.CTkLabel(
-                self.datos_procesos_frame,
-                text=f"{proceso.get('tiempo_retorno_normalizado', '--')}",
-                font=ctk.CTkFont(size=int(12 * self.factor_escala)),
-                height=int(30 * self.factor_escala),
-                anchor="center"
-            )
-            trn_label.grid(row=i, column=2, padx=int(10 * self.factor_escala), pady=int(5 * self.factor_escala), sticky="ew")
+            self._crear_fila_tabla(i + 1, datos_fila, row_color, False)
+    
+    def _crear_fila_tabla(self, row_index, datos_fila, color_fondo, es_encabezado=False):
+        """Crea una fila de la tabla con el estilo apropiado."""
+        # Crear frame para la fila completa
+        row_frame = ctk.CTkFrame(
+            self.tabla_datos_frame,
+            fg_color=color_fondo,
+            corner_radius=int(4 * self.factor_escala),
+            border_width=1,
+            border_color="#555555"
+        )
+        row_frame.grid(row=row_index, column=0, columnspan=4, sticky="ew", padx=int(1 * self.factor_escala), pady=int(1 * self.factor_escala))
+        
+        # Configurar anchos fijos para las columnas de la fila
+        row_frame.grid_columnconfigure(0, weight=1, minsize=int(120 * self.factor_escala))  
+        row_frame.grid_columnconfigure(1, weight=1, minsize=int(120 * self.factor_escala))  
+        row_frame.grid_columnconfigure(2, weight=1, minsize=int(120 * self.factor_escala))  
+        row_frame.grid_columnconfigure(3, weight=1, minsize=int(120 * self.factor_escala)) 
+        
+        # Crear celdas para cada columna
+        for j, valor in enumerate(datos_fila):
+            # Configurar fuente según si es encabezado o no
+            if es_encabezado:
+                font = ctk.CTkFont(size=int(13 * self.factor_escala), weight="bold")
+                height = int(35 * self.factor_escala)
+                padx = int(8 * self.factor_escala)  # Padding uniforme para encabezados
+            else:
+                font = ctk.CTkFont(size=int(12 * self.factor_escala))
+                height = int(35 * self.factor_escala)
+                padx = int(8 * self.factor_escala)  # Padding uniforme para datos
             
-            # Tiempo en Estado de Listo
-            tel_label = ctk.CTkLabel(
-                self.datos_procesos_frame,
-                text=f"{proceso.get('tiempo_estado_listo', '--')}",
-                font=ctk.CTkFont(size=int(12 * self.factor_escala)),
-                height=int(30 * self.factor_escala),
-                anchor="center"
+            cell_label = ctk.CTkLabel(
+                row_frame,
+                text=valor,
+                font=font,
+                height=height,
+                anchor="center",
+                justify="center",
+                fg_color="transparent"
             )
-            tel_label.grid(row=i, column=3, padx=int(10 * self.factor_escala), pady=int(5 * self.factor_escala), sticky="ew")
+            cell_label.grid(row=0, column=j, sticky="ew", padx=padx, pady=int(6 * self.factor_escala))
     
     def actualizar_resultados_tanda(self, tiempo_retorno, tiempo_medio_retorno):
         """Actualiza los resultados de la tanda."""
@@ -308,7 +325,7 @@ class PestañaResultados(ctk.CTkFrame):
     def limpiar_resultados(self):
         """Limpia todos los resultados."""
         # Limpiar datos de procesos
-        for widget in self.datos_procesos_frame.winfo_children():
+        for widget in self.tabla_datos_frame.winfo_children():
             widget.destroy()
         
         # Limpiar datos de tanda
@@ -323,16 +340,28 @@ class PestañaResultados(ctk.CTkFrame):
     def mostrar_mensaje_inicial(self):
         """Muestra un mensaje inicial cuando no hay resultados."""
         # Limpiar datos de procesos
-        for widget in self.datos_procesos_frame.winfo_children():
+        for widget in self.tabla_datos_frame.winfo_children():
             widget.destroy()
         
+        # Crear frame para el mensaje
+        mensaje_frame = ctk.CTkFrame(
+            self.tabla_datos_frame,
+            fg_color="#2b2b2b",
+            corner_radius=int(8 * self.factor_escala),
+            border_width=1,
+            border_color="#555555"
+        )
+        mensaje_frame.grid(row=0, column=0, columnspan=4, sticky="ew", padx=int(2 * self.factor_escala), pady=int(10 * self.factor_escala))
+        mensaje_frame.grid_columnconfigure(0, weight=1)
+        
         mensaje_label = ctk.CTkLabel(
-            self.datos_procesos_frame,
+            mensaje_frame,
             text="Ejecuta una simulación para ver los resultados",
             font=ctk.CTkFont(size=int(14 * self.factor_escala)),
-            text_color="gray"
+            text_color="gray",
+            fg_color="transparent"
         )
-        mensaje_label.grid(row=0, column=0, columnspan=4, pady=int(20 * self.factor_escala), sticky="ew")
+        mensaje_label.grid(row=0, column=0, pady=int(20 * self.factor_escala), sticky="ew")
     
     def actualizar_escalado(self, nuevo_factor_escala):
         """Actualiza el escalado del componente dinámicamente."""
@@ -363,3 +392,7 @@ class PestañaResultados(ctk.CTkFrame):
             self.label_cpu_procesos.configure(
                 font=ctk.CTkFont(size=int(15 * self.factor_escala), weight="bold")
             )
+        
+        # Actualizar altura del scrollable frame
+        if hasattr(self, 'scrollable_tabla'):
+            self.scrollable_tabla.configure(height=int(300 * self.factor_escala))
