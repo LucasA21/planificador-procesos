@@ -379,7 +379,7 @@ class ExportadorPDF:
             tipo_evento = evento.get('evento', '')
             
             # Saltar eventos del sistema y eventos de TIP, TCP, TFP (ya procesados)
-            if proceso_nombre == 'SISTEMA' or tipo_evento in ['inicio_tip', 'inicio_tcp', 'inicio_tfp', 'fin_tip', 'fin_tcp', 'fin_tfp']:
+            if proceso_nombre == 'SISTEMA' or tipo_evento in ['inicio_tip', 'inicio_tcp', 'inicio_tfp', 'fin_tip', 'fin_tcp', 'fin_tfp', 'inicio_io']:
                 continue
             
             if proceso_nombre not in procesos:

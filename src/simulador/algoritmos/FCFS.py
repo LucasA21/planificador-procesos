@@ -83,6 +83,8 @@ class FCFS:
 
             # Procesar tiempo de TIP/TCP/TFP
             if self.procesar_tiempo_bloqueo():
+                # Procesar procesos bloqueados incluso si hay TIP/TCP/TFP activo
+                self.procesar_procesos_bloqueados()
                 self.tiempo_actual += 1
                 continue
 
@@ -158,20 +160,34 @@ class FCFS:
 
 
     def bloquear_proceso(self):
+        # Guardar tiempo de bloqueo y duración original de I/O
+        self.proceso_actual.tiempo_bloqueo = self.tiempo_actual
+        self.proceso_actual.duracion_rafagas_io_original = self.proceso_actual.get_duracion_rafagas_io()
+        
         # Reiniciar duracion rafaga de I/O para la siguiente vez
-        self.proceso_actual.duracion_rafagas_io = self.proceso_actual.get_duracion_rafagas_io()
+        self.proceso_actual.duracion_rafagas_io = self.proceso_actual.duracion_rafagas_io_original
+        
         
         self.proceso_actual.estado = "bloqueado"
 
         self.procesos_bloqueados.append(self.proceso_actual)
 
-        # Registrar evento
+        # Registrar evento de bloqueo
         self.resultados.append({
             'tiempo': self.tiempo_actual,
             'proceso': self.proceso_actual.nombre,
             'evento': 'bloqueo',
             'estado': 'bloqueado'
         })
+
+        # Registrar evento de inicio de I/O en el siguiente tiempo (si hay duración de I/O)
+        if self.proceso_actual.duracion_rafagas_io > 0:
+            self.resultados.append({
+                'tiempo': self.tiempo_actual + 1,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_io',
+                'estado': 'bloqueado'
+            })
 
         self.proceso_actual = None
 
@@ -203,25 +219,28 @@ class FCFS:
         procesos_que_terminaron_io = []
 
         for proceso in self.procesos_bloqueados:
-            proceso.duracion_rafagas_io -= 1
-
-            if proceso.duracion_rafagas_io == 0:
-                procesos_que_terminaron_io.append(proceso)
-                proceso.estado = "listo"
+            # Solo procesar procesos que no se bloquearon en este tiempo
+            if proceso.tiempo_bloqueo < self.tiempo_actual:
+                # Decrementar la duración de I/O
+                proceso.duracion_rafagas_io -= 1
                 
-                # Reiniciar duracion de CPU para la siguiente ejecución
-                proceso.duracion_rafagas_cpu = proceso.get_duracion_rafagas_cpu()
+                if proceso.duracion_rafagas_io == 0:
+                    procesos_que_terminaron_io.append(proceso)
+                    proceso.estado = "listo"
+                    
+                    # Reiniciar duracion de CPU para la siguiente ejecución
+                    proceso.duracion_rafagas_cpu = proceso.get_duracion_rafagas_cpu()
 
-                # IMPORTANTE: Los procesos que vuelven de I/O van al FINAL de la cola
-                self.cola_listos.append(proceso)
+                    # IMPORTANTE: Los procesos que vuelven de I/O van al FINAL de la cola
+                    self.cola_listos.append(proceso)
 
-                # Registrar evento
-                self.resultados.append({
-                    'tiempo': self.tiempo_actual,
-                    'proceso': proceso.nombre,
-                    'evento': 'fin_io',
-                    'estado': 'listo'
-                })
+                    # Registrar evento de fin de I/O en el tiempo actual del simulador
+                    self.resultados.append({
+                        'tiempo': self.tiempo_actual,
+                        'proceso': proceso.nombre,
+                        'evento': 'fin_io',
+                        'estado': 'listo'
+                    })
         for proceso in procesos_que_terminaron_io:
             self.procesos_bloqueados.remove(proceso)
 
