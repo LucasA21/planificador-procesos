@@ -379,7 +379,7 @@ class ExportadorPDF:
             tipo_evento = evento.get('evento', '')
             
             # Saltar eventos del sistema y eventos de TIP, TCP, TFP (ya procesados)
-            if proceso_nombre == 'SISTEMA' or tipo_evento in ['inicio_tip', 'inicio_tcp', 'inicio_tfp', 'fin_tip', 'fin_tcp', 'fin_tfp', 'inicio_io']:
+            if proceso_nombre == 'SISTEMA' or tipo_evento in ['inicio_tip', 'inicio_tcp', 'inicio_tfp', 'fin_tip', 'fin_tcp', 'fin_tfp']:
                 continue
             
             if proceso_nombre not in procesos:
@@ -409,17 +409,18 @@ class ExportadorPDF:
                     if segmento['fin'] is None and segmento['tipo'] == 'inicio ejecucion':
                         segmento['fin'] = tiempo
                         break
-                # Agregar segmento de I/O (empieza en bloqueo)
+            elif tipo_evento == 'inicio_io':
+                # Agregar segmento de I/O que empieza en inicio_io
                 procesos[proceso_nombre]['segmentos'].append({
-                    'inicio': tiempo,  # I/O empieza en el bloqueo
-                    'tipo': 'bloqueo',
+                    'inicio': tiempo,  # I/O empieza en inicio_io
+                    'tipo': 'inicio_io',
                     'fin': None
                 })
             elif tipo_evento == 'fin_io':
                 # Buscar el segmento de I/O para cerrarlo
                 for segmento in reversed(procesos[proceso_nombre]['segmentos']):
-                    if segmento['fin'] is None and segmento['tipo'] == 'bloqueo':
-                        segmento['fin'] = tiempo - 1  # I/O termina en fin_io-1
+                    if segmento['fin'] is None and segmento['tipo'] == 'inicio_io':
+                        segmento['fin'] = tiempo  # I/O termina en fin_io (inclusive)
                         break
             elif tipo_evento == 'terminacion':
                 # Buscar el segmento de ejecución para cerrarlo
@@ -544,7 +545,7 @@ class ExportadorPDF:
                         return 'TCP'
                     elif tipo == 'inicio_tfp':
                         return 'TFP'
-                    elif tipo == 'bloqueo':
+                    elif tipo == 'bloqueo' or tipo == 'inicio_io':
                         return 'I/O'
                     elif tipo == 'llegada':
                         return 'llegada'
@@ -560,7 +561,7 @@ class ExportadorPDF:
                         return 'TCP'
                     elif tipo == 'inicio_tfp':
                         return 'TFP'
-                    elif tipo == 'bloqueo':
+                    elif tipo == 'bloqueo' or tipo == 'inicio_io':
                         return 'I/O'
                     elif tipo == 'llegada':
                         return 'llegada'
