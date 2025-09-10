@@ -38,12 +38,36 @@ class FCFS:
 
         self.tiempo_restante_bloqueo = 0
         self.tipo_bloqueo = None
+        
+        # Contadores de CPU para mediciones correctas
+        self.cpu_proc = 0  # Tiempo real de CPU ejecutando procesos
+        self.cpu_so = 0    # Tiempo real de CPU en labores del SO
+        self.cpu_idle = 0  # Tiempo real de CPU desocupada
+        
+        # Tiempos de referencia para cálculos
+        self.t_primer_arribo = None
+        self.t_ultimo_tfp = None
+        
+        # Contadores por proceso
+        self.cpu_proc_por_proceso = {}
+        self.t_arribo_por_proceso = {}
+        self.t_fin_por_proceso = {}
+        self.t_listo_por_proceso = {}
 
     def procesar_llegadas(self):
         for proceso in self.procesos:
             if proceso.tiempo_arrivo == self.tiempo_actual:
                 self.insertar_ordenado(proceso)
                 proceso.estado = "listo"
+                
+                # Registrar primer arribo
+                if self.t_primer_arribo is None:
+                    self.t_primer_arribo = self.tiempo_actual
+                
+                # Registrar tiempo de arribo del proceso
+                self.t_arribo_por_proceso[proceso.nombre] = self.tiempo_actual
+                self.cpu_proc_por_proceso[proceso.nombre] = 0
+                self.t_listo_por_proceso[proceso.nombre] = 0
 
                 # Registrar eventos
                 self.resultados.append({
@@ -91,6 +115,9 @@ class FCFS:
             # Incrementar tiempo de espera para procesos en cola de listos
             for proceso in self.cola_listos:
                 proceso.tiempo_en_listo += 1
+                # Acumular tiempo en estado listo (solo después de pagar TIP)
+                if proceso.nombre in self.t_listo_por_proceso:
+                    self.t_listo_por_proceso[proceso.nombre] += 1
 
             # Si no hay proceso ejecutandose, selecciona uno
             if self.proceso_actual is None:
@@ -103,20 +130,55 @@ class FCFS:
             # Procesar procesos bloqueados
             self.procesar_procesos_bloqueados()
 
+            # Calcular CPU_idle: si no hay proceso ejecutándose ni labores del SO
+            if (self.proceso_actual is None and 
+                self.tiempo_restante_bloqueo == 0 and 
+                len(self.cola_listos) == 0):
+                self.cpu_idle += 1
+
             # Avanzar una unidad de tiempo
             self.tiempo_actual += 1
         
         if iteraciones >= tiempo_maximo:
             print(f"⚠️ Advertencia: Simulación terminada por límite de tiempo ({tiempo_maximo} iteraciones)")
             print(f"Estado final - Tiempo: {self.tiempo_actual}, Iteraciones: {iteraciones}")
+    
+    def obtener_estadisticas_cpu(self):
+        """Retorna las estadísticas de CPU calculadas correctamente."""
+        # Calcular T_total = t_ultimo_TFP - t_primer_arribo
+        if self.t_primer_arribo is not None and self.t_ultimo_tfp is not None:
+            t_total = self.t_ultimo_tfp - self.t_primer_arribo
+        else:
+            t_total = 0
+        
+        # Verificar que CPU_idle sea correcto
+        cpu_idle_calculado = t_total - (self.cpu_proc + self.cpu_so)
+        if cpu_idle_calculado < 0:
+            print(f"⚠️ Advertencia: CPU_idle calculado es negativo: {cpu_idle_calculado}")
+            print(f"CPU_proc: {self.cpu_proc}, CPU_SO: {self.cpu_so}, T_total: {t_total}")
+        
+        return {
+            'cpu_proc': self.cpu_proc,
+            'cpu_so': self.cpu_so,
+            'cpu_idle': max(0, cpu_idle_calculado),
+            't_total': t_total,
+            't_primer_arribo': self.t_primer_arribo,
+            't_ultimo_tfp': self.t_ultimo_tfp,
+            'cpu_proc_por_proceso': self.cpu_proc_por_proceso,
+            't_arribo_por_proceso': self.t_arribo_por_proceso,
+            't_fin_por_proceso': self.t_fin_por_proceso,
+            't_listo_por_proceso': self.t_listo_por_proceso
+        }
 
 
     def ejecutar_proceso_actual(self):
         if self.proceso_actual is None:
             return
 
-        # Se consume una unidad de tiempo
+        # Se consume una unidad de tiempo de CPU ejecutando proceso
         self.proceso_actual.duracion_rafagas_cpu -= 1
+        self.cpu_proc += 1  # Acumular tiempo real de CPU ejecutando procesos
+        self.cpu_proc_por_proceso[self.proceso_actual.nombre] += 1  # Acumular por proceso
 
         if self.proceso_actual.duracion_rafagas_cpu == 0:
             self.proceso_actual.cantidad_rafagas_cpu -= 1
@@ -213,6 +275,10 @@ class FCFS:
             self.proceso_actual.estado = "terminando"
             self.procesos_terminados.append(self.proceso_actual)
         else: 
+            # Registrar tiempo de finalización (sin TFP)
+            self.t_fin_por_proceso[self.proceso_actual.nombre] = self.tiempo_actual
+            self.t_ultimo_tfp = self.tiempo_actual
+            
             self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual)
             self.proceso_actual.estado = "terminado"
             self.procesos_terminados.append(self.proceso_actual)
@@ -310,6 +376,8 @@ class FCFS:
     def procesar_tiempo_bloqueo(self):
         if self.tiempo_restante_bloqueo > 0:
             self.tiempo_restante_bloqueo -= 1
+            # Acumular tiempo de CPU en labores del SO
+            self.cpu_so += 1
 
             if self.tiempo_restante_bloqueo == 0:
                 # Determinar el nombre del proceso para el evento de fin
@@ -351,6 +419,10 @@ class FCFS:
         # Buscar el proceso que estaba terminando
         for proceso in self.procesos_terminados:
             if proceso.estado == "terminando":
+                # Registrar tiempo de finalización (con TFP)
+                self.t_fin_por_proceso[proceso.nombre] = self.tiempo_actual
+                self.t_ultimo_tfp = self.tiempo_actual
+                
                 proceso.calcular_tiempo_retorno(self.tiempo_actual)
                 proceso.estado = "terminado"
                 

@@ -90,21 +90,22 @@ class Simulador:
                 'tiempo_estado_listo': proceso.tiempo_en_listo
             })
         
+        # Obtener estadísticas de CPU calculadas correctamente
+        stats_cpu = self.algoritmo_actual.obtener_estadisticas_cpu()
+        
         # Calcular estadísticas de la tanda
         if procesos_terminados:
             tiempos_retorno = [p.tiempo_retorno for p in procesos_terminados]
             tiempo_medio_retorno = sum(tiempos_retorno) / len(tiempos_retorno)
-            # El tiempo_actual se incrementa después de procesar los eventos, 
-            # por lo que el tiempo real de finalización es tiempo_actual - 1
-            tiempo_total = self.algoritmo_actual.tiempo_actual - 1
+            tiempo_total = stats_cpu['t_total']
         else:
             tiempo_medio_retorno = 0
             tiempo_total = 0
         
-        # Calcular uso de CPU
-        tiempo_cpu_procesos = sum(p.cantidad_rafagas_cpu * p.get_duracion_rafagas_cpu() for p in procesos_terminados)
-        tiempo_cpu_so = len(procesos_terminados) * self.algoritmo_actual.tiempo_tcp
-        tiempo_cpu_desocupada = max(0, tiempo_total - tiempo_cpu_procesos - tiempo_cpu_so)
+        # Usar estadísticas calculadas correctamente
+        tiempo_cpu_procesos = stats_cpu['cpu_proc']
+        tiempo_cpu_so = stats_cpu['cpu_so']
+        tiempo_cpu_desocupada = stats_cpu['cpu_idle']
         
         # Procesar datos para el diagrama de Gantt
         datos_gantt = self._procesar_datos_gantt()
@@ -211,10 +212,13 @@ class Simulador:
             tiempos_retorno = [p['tiempo_retorno'] for p in datos_pdf['procesos']]
             datos_pdf['tiempo_medio_retorno'] = sum(tiempos_retorno) / len(tiempos_retorno)
         
-        # Calcular uso de CPU
-        tiempo_cpu_procesos = sum(p.cantidad_rafagas_cpu * p.get_duracion_rafagas_cpu() for p in self.algoritmo_actual.procesos)
-        tiempo_cpu_so = len(self.algoritmo_actual.procesos) * self.algoritmo_actual.tiempo_tcp
-        tiempo_cpu_desocupada = max(0, datos_pdf['tiempo_total'] - tiempo_cpu_procesos - tiempo_cpu_so)
+        # Obtener estadísticas de CPU calculadas correctamente
+        stats_cpu = self.algoritmo_actual.obtener_estadisticas_cpu()
+        
+        # Usar estadísticas calculadas correctamente
+        tiempo_cpu_procesos = stats_cpu['cpu_proc']
+        tiempo_cpu_so = stats_cpu['cpu_so']
+        tiempo_cpu_desocupada = stats_cpu['cpu_idle']
         
         if datos_pdf['tiempo_total'] > 0:
             datos_pdf['cpu_desocupada'] = f"{tiempo_cpu_desocupada} ({tiempo_cpu_desocupada/datos_pdf['tiempo_total']*100:.1f}%)"
