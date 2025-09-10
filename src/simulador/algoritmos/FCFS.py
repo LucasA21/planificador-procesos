@@ -172,6 +172,14 @@ class FCFS:
 
         self.procesos_bloqueados.append(self.proceso_actual)
 
+        # Registrar evento de fin de ejecución
+        self.resultados.append({
+            'tiempo': self.tiempo_actual,
+            'proceso': self.proceso_actual.nombre,
+            'evento': 'fin_ejecucion',
+            'estado': 'ejecutando'
+        })
+
         # Registrar evento de bloqueo
         self.resultados.append({
             'tiempo': self.tiempo_actual,
@@ -192,6 +200,14 @@ class FCFS:
         self.proceso_actual = None
 
     def terminar_proceso(self):
+        # Registrar evento de fin de ejecución
+        self.resultados.append({
+            'tiempo': self.tiempo_actual,
+            'proceso': self.proceso_actual.nombre,
+            'evento': 'fin_ejecucion',
+            'estado': 'ejecutando'
+        })
+
         if self.tiempo_tfp > 0:
             self.aplicar_tfp()
             self.proceso_actual.estado = "terminando"

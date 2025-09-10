@@ -189,17 +189,29 @@ class ExportadorPDF:
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F8F9FA')]),
         ]
         
-        # Aplicar colores según el tipo de evento
+        # Aplicar colores según el tipo de evento (coincidiendo con el Gantt)
         for i, evento in enumerate(eventos, 1):
             tipo_evento = evento.get('evento', '')
-            if 'inicio' in tipo_evento:
-                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#28A745')))
-            elif 'fin' in tipo_evento:
-                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#DC3545')))
-            elif 'bloqueo' in tipo_evento:
-                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#FFC107')))
-            elif 'terminacion' in tipo_evento:
-                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#6F42C1')))
+            
+            # Colores que coinciden con el diagrama de Gantt
+            if tipo_evento == 'llegada':
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#17A2B8')))  # Azul claro
+            elif tipo_evento in ['inicio ejecucion', 'fin ejecucion', 'fin_ejecucion']:
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#28A745')))  # Verde
+            elif tipo_evento == 'inicio_io':
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#DC3545')))  # Rojo
+            elif tipo_evento == 'fin_io':
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#B02A37')))  # Rojo más oscuro
+            elif tipo_evento in ['inicio_tip', 'fin_tip']:
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#6C757D')))  # Gris
+            elif tipo_evento in ['inicio_tcp', 'fin_tcp']:
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#E83E8C')))  # Magenta
+            elif tipo_evento in ['inicio_tfp', 'fin_tfp']:
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#FFC107')))  # Amarillo
+            elif tipo_evento == 'bloqueo':
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#DC3545')))  # Rojo (mismo que I/O)
+            elif tipo_evento == 'terminacion':
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#28A745')))  # Verde (mismo que ejecución)
         
         tabla.setStyle(TableStyle(estilos_tabla))
         contenido.append(tabla)
