@@ -12,6 +12,7 @@ class PestañaResultados(ctk.CTkFrame):
         super().__init__(parent, corner_radius=15, fg_color="transparent", **kwargs)
         
         self.factor_escala = factor_escala
+        self.ruta_pdf_actual = None
         self._crear_widgets()
     
     def _crear_widgets(self):
@@ -244,6 +245,29 @@ class PestañaResultados(ctk.CTkFrame):
             anchor="center"
         )
         self.label_cpu_procesos.grid(row=0, column=0, pady=int(20 * self.factor_escala), padx=int(15 * self.factor_escala), sticky="ew")
+        
+        # Contenedor separado para el botón de PDF
+        self.pdf_frame = ctk.CTkFrame(
+            self.scrollable_frame,
+            corner_radius=int(12 * self.factor_escala),
+            border_width=1
+        )
+        self.pdf_frame.grid(row=3, column=0, sticky="ew", pady=(0, int(20 * self.factor_escala)))
+        self.pdf_frame.grid_columnconfigure(0, weight=1)
+        
+        # Botón para abrir PDF (inicialmente oculto)
+        self.boton_abrir_pdf = ctk.CTkButton(
+            self.pdf_frame,
+            text="Resultados de la simulacion",
+            command=self._abrir_pdf,
+            font=ctk.CTkFont(size=int(14 * self.factor_escala), weight="bold"),
+            fg_color="#3b82f6",
+            hover_color="#2563eb",
+            height=int(35 * self.factor_escala),
+            width=int(120 * self.factor_escala)
+        )
+        self.boton_abrir_pdf.grid(row=0, column=0, pady=int(20 * self.factor_escala), padx=int(20 * self.factor_escala), sticky="ew")
+        self.pdf_frame.grid_remove()  # Ocultar inicialmente
     
     def actualizar_resultados_procesos(self, datos_procesos):
         """Actualiza los resultados por proceso."""
@@ -336,6 +360,10 @@ class PestañaResultados(ctk.CTkFrame):
         self.label_cpu_desocupada.configure(text="CPU Desocupada: --")
         self.label_cpu_so.configure(text="CPU por SO: --")
         self.label_cpu_procesos.configure(text="CPU por Procesos: --")
+        
+        # Ocultar contenedor de PDF
+        self.pdf_frame.grid_remove()
+        self.ruta_pdf_actual = None
     
     def mostrar_mensaje_inicial(self):
         """Muestra un mensaje inicial cuando no hay resultados."""
@@ -362,6 +390,28 @@ class PestañaResultados(ctk.CTkFrame):
             fg_color="transparent"
         )
         mensaje_label.grid(row=0, column=0, pady=int(20 * self.factor_escala), sticky="ew")
+    
+    def _abrir_pdf(self):
+        """Abre el PDF actual."""
+        if self.ruta_pdf_actual:
+            import os
+            import subprocess
+            import platform
+            
+            try:
+                if platform.system() == "Windows":
+                    os.startfile(self.ruta_pdf_actual)
+                elif platform.system() == "Darwin":  # macOS
+                    subprocess.run(["open", self.ruta_pdf_actual])
+                else:  # Linux
+                    subprocess.run(["xdg-open", self.ruta_pdf_actual])
+            except Exception as e:
+                print(f"Error al abrir el PDF: {e}")
+    
+    def mostrar_notificacion_pdf(self, ruta_pdf):
+        """Muestra el botón para abrir el PDF."""
+        self.ruta_pdf_actual = ruta_pdf
+        self.pdf_frame.grid()  # Mostrar el contenedor del botón
     
     def actualizar_escalado(self, nuevo_factor_escala):
         """Actualiza el escalado del componente dinámicamente."""

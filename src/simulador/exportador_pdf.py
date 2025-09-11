@@ -442,6 +442,10 @@ class ExportadorPDF:
                     if segmento['fin'] is None and segmento['tipo'] == 'inicio ejecucion':
                         segmento['fin'] = tiempo
                         break
+                # Marcar que el proceso terminó en este tiempo
+                if proceso_nombre not in procesos:
+                    procesos[proceso_nombre] = {'llegada': None, 'segmentos': []}
+                procesos[proceso_nombre]['terminacion'] = tiempo
         
         return procesos
     
@@ -493,8 +497,11 @@ class ExportadorPDF:
             # Crear la fila de tiempo para este proceso
             for tiempo in range(inicio_tiempo, fin_tiempo + 1):
                 celda = self._determinar_contenido_celda_gantt(tiempo, datos_proceso)
-                # No agregar texto, solo el tipo para colorear
-                fila.append('')
+                # Solo mostrar texto si es 'F' de terminación, sino mostrar vacío
+                if celda == 'F':
+                    fila.append(celda)
+                else:
+                    fila.append('')
             
             filas.append(fila)
         
@@ -535,6 +542,8 @@ class ExportadorPDF:
                     estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#FFC107')))  # Amarillo
                 elif celda_tipo == 'llegada':
                     estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#17A2B8')))  # Azul claro
+                elif celda_tipo == 'F':
+                    estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#28A745')))  # Verde (mismo que CPU)
         
         tabla.setStyle(TableStyle(estilos))
         return tabla
@@ -567,7 +576,12 @@ class ExportadorPDF:
                 # Si el segmento tiene fin definido, verificar si el tiempo está en el rango
                 if segmento['inicio'] <= tiempo <= segmento['fin']:
                     tipo = segmento['tipo']
-                    if tipo == 'inicio ejecucion':
+                    # Verificar si es el último tiempo de un segmento de ejecución y hay terminación
+                    if (tipo == 'inicio ejecucion' and 
+                        'terminacion' in datos_proceso and 
+                        datos_proceso['terminacion'] == tiempo):
+                        return 'F'
+                    elif tipo == 'inicio ejecucion':
                         return 'CPU'
                     elif tipo == 'inicio_tip':
                         return 'TIP'
@@ -600,6 +614,7 @@ class ExportadorPDF:
             ['TIP', 'Tiempo de Inicio de Proceso'],
             ['TCP', 'Tiempo de Cambio de Proceso'],
             ['TFP', 'Tiempo de Finalización de Proceso'],
+            ['F', 'Proceso terminado'],
         ]
         
         leyenda_table = Table(leyenda_data, colWidths=[0.8*inch, 3*inch])
@@ -619,6 +634,7 @@ class ExportadorPDF:
             ('BACKGROUND', (0, 4), (0, 4), colors.HexColor('#6C757D')),  # Gris para TIP
             ('BACKGROUND', (0, 5), (0, 5), colors.HexColor('#E83E8C')),  # Magenta para TCP
             ('BACKGROUND', (0, 6), (0, 6), colors.HexColor('#FFC107')),  # Amarillo para TFP
+            ('BACKGROUND', (0, 7), (0, 7), colors.HexColor('#28A745')),  # Verde para F
         ]))
         
         contenido.append(leyenda_table)

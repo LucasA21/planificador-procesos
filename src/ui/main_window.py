@@ -375,6 +375,10 @@ class VentanaPrincipal(ctk.CTk):
                 resultados['cpu_procesos']
             )
             
+            # Mostrar notificación del PDF si se generó correctamente
+            if resultados.get('ruta_pdf'):
+                self.pestaña_resultados.mostrar_notificacion_pdf(resultados['ruta_pdf'])
+            
             
     
     def _limpiar_resultados(self):

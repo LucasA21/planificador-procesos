@@ -65,7 +65,13 @@ class Simulador:
         self.algoritmo_actual.ejecutar()
         
         # Procesar resultados para la interfaz
-        return self._procesar_resultados_fcfs()
+        resultados = self._procesar_resultados_fcfs()
+        
+        # Agregar ruta del PDF a los resultados
+        if 'ruta_pdf' not in resultados:
+            resultados['ruta_pdf'] = None
+        
+        return resultados
     
     def _procesar_resultados_fcfs(self):
         """
@@ -110,8 +116,8 @@ class Simulador:
         # Procesar datos para el diagrama de Gantt
         datos_gantt = self._procesar_datos_gantt()
         
-        # Exportar reporte PDF
-        self.exportar_pdf()
+        # Exportar reporte PDF y capturar la ruta
+        ruta_pdf = self.exportar_pdf()
 
         return {
             'procesos': datos_procesos,
@@ -121,7 +127,8 @@ class Simulador:
             'cpu_so': f"{tiempo_cpu_so} ({tiempo_cpu_so/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
             'cpu_procesos': f"{tiempo_cpu_procesos} ({tiempo_cpu_procesos/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
             'gantt': datos_gantt,
-            'eventos': self.algoritmo_actual.resultados
+            'eventos': self.algoritmo_actual.resultados,
+            'ruta_pdf': ruta_pdf
         }
     
     def _procesar_datos_gantt(self):
@@ -232,5 +239,7 @@ class Simulador:
         try:
             ruta_pdf = exportador.exportar_simulacion(datos_pdf, filepath)
             print(f"✅ Reporte PDF exportado a: {ruta_pdf}")
+            return ruta_pdf
         except Exception as e:
             print(f"❌ Error al exportar PDF: {e}")
+            return None
