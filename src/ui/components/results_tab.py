@@ -393,27 +393,70 @@ class PestañaResultados(ctk.CTkFrame):
     
     def _abrir_pdf(self):
         """Abre el PDF actual."""
-        if self.ruta_pdf_actual:
-            import os
-            import subprocess
-            import platform
+        if not self.ruta_pdf_actual:
+            print("Error: No hay ruta de PDF configurada")
+            return
             
-            # Convertir a ruta absoluta y verificar que existe
-            ruta_absoluta = os.path.abspath(self.ruta_pdf_actual)
+        import os
+        import subprocess
+        import platform
+        
+        # Convertir a ruta absoluta y verificar que existe
+        ruta_absoluta = os.path.abspath(self.ruta_pdf_actual)
+        print(f"Intentando abrir PDF: {ruta_absoluta}")
+        
+        if not os.path.exists(ruta_absoluta):
+            print(f"Error: El archivo PDF no existe en {ruta_absoluta}")
+            # Intentar buscar en el directorio actual
+            directorio_actual = os.getcwd()
+            print(f"Directorio actual: {directorio_actual}")
+            
+            # Buscar archivos PDF en el directorio actual y subdirectorios
+            for root, dirs, files in os.walk(directorio_actual):
+                for file in files:
+                    if file.endswith('.pdf') and 'reporte_simulacion' in file:
+                        ruta_encontrada = os.path.join(root, file)
+                        print(f"PDF encontrado: {ruta_encontrada}")
+                        ruta_absoluta = ruta_encontrada
+                        break
+                if ruta_absoluta != self.ruta_pdf_actual:
+                    break
             
             if not os.path.exists(ruta_absoluta):
-                print(f"Error: El archivo PDF no existe en {ruta_absoluta}")
+                print("No se encontró ningún PDF de simulación")
                 return
+        
+        try:
+            sistema = platform.system()
+            print(f"Sistema operativo detectado: {sistema}")
             
-            try:
-                if platform.system() == "Windows":
-                    os.startfile(ruta_absoluta)
-                elif platform.system() == "Darwin":  # macOS
-                    subprocess.run(["open", ruta_absoluta])
-                else:  # Linux
-                    subprocess.run(["xdg-open", ruta_absoluta])
-            except Exception as e:
-                print(f"Error al abrir el PDF: {e}")
+            if sistema == "Windows":
+                print("Usando os.startfile para Windows")
+                os.startfile(ruta_absoluta)
+            elif sistema == "Darwin":  # macOS
+                print("Usando comando 'open' para macOS")
+                subprocess.run(["open", ruta_absoluta], check=True)
+            else:  # Linux
+                print("Usando comando 'xdg-open' para Linux")
+                # Intentar diferentes comandos para abrir PDF en Linux
+                comandos = ["xdg-open", "evince", "okular", "firefox", "google-chrome", "chromium-browser"]
+                
+                for comando in comandos:
+                    try:
+                        print(f"Intentando con: {comando}")
+                        subprocess.run([comando, ruta_absoluta], check=True, timeout=5)
+                        print(f"PDF abierto exitosamente con {comando}")
+                        return
+                    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                        print(f"Comando {comando} falló, probando siguiente...")
+                        continue
+                
+                print("Error: No se pudo abrir el PDF con ningún comando disponible")
+                
+        except Exception as e:
+            print(f"Error al abrir el PDF: {e}")
+            import traceback
+            traceback.print_exc()
     
     def mostrar_notificacion_pdf(self, ruta_pdf):
         """Muestra el botón para abrir el PDF."""
