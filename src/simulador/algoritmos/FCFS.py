@@ -147,7 +147,11 @@ class FCFS:
         """Retorna las estadísticas de CPU calculadas correctamente."""
         # Calcular T_total = t_ultimo_TFP - t_primer_arribo
         if self.t_primer_arribo is not None and self.t_ultimo_tfp is not None:
+            # Si hay TFP, usar t_ultimo_tfp directamente
             t_total = self.t_ultimo_tfp - self.t_primer_arribo
+        elif self.t_primer_arribo is not None:
+            # Si no hay TFP pero hay procesos, usar tiempo_actual
+            t_total = self.tiempo_actual - self.t_primer_arribo
         else:
             t_total = 0
         
@@ -277,7 +281,8 @@ class FCFS:
         else: 
             # Registrar tiempo de finalización (sin TFP)
             self.t_fin_por_proceso[self.proceso_actual.nombre] = self.tiempo_actual
-            self.t_ultimo_tfp = self.tiempo_actual
+            # Para TFP = 0, no hay TFP real, por lo que no registramos t_ultimo_tfp
+            # El T_total se calculará usando tiempo_actual - 1
             
             self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual)
             self.proceso_actual.estado = "terminado"
@@ -330,47 +335,75 @@ class FCFS:
         if self.tiempo_tip > 0:
             self.tiempo_restante_bloqueo = self.tiempo_tip
             self.tipo_bloqueo = "tip"
+            
+            # Registrar evento solo si TIP > 0
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_tip',
+                'estado': 'bloqueado_sistema'
+            })
         else:
             self.tipo_bloqueo = None
-
-        # Registrar evento
-        self.resultados.append({
-            'tiempo': self.tiempo_actual,
-            'proceso': self.proceso_actual.nombre,
-            'evento': 'inicio_tip',
-            'estado': 'bloqueado_sistema'
-            
-        })
+            # Si TIP = 0, el proceso pasa directamente a ejecutándose
+            self.proceso_actual.estado = "ejecutando"
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio ejecucion',
+                'estado': 'ejecutando'
+            })
 
     def aplicar_tcp(self):
         if self.tiempo_tcp > 0:
             self.tiempo_restante_bloqueo = self.tiempo_tcp
             self.tipo_bloqueo = "tcp"
+            
+            # Registrar evento solo si TCP > 0
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_tcp',
+                'estado': 'bloqueado_sistema'
+            })
         else:
             self.tipo_bloqueo = None
-
-        # Registrar evento
-        self.resultados.append({
-            'tiempo': self.tiempo_actual,
-            'proceso': self.proceso_actual.nombre,
-            'evento': 'inicio_tcp',
-            'estado': 'bloqueado_sistema'
-        })
+            # Si TCP = 0, el proceso pasa directamente a ejecutando
+            self.proceso_actual.estado = "ejecutando"
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio ejecucion',
+                'estado': 'ejecutando'
+            })
 
     def aplicar_tfp(self):
         if self.tiempo_tfp > 0:
             self.tiempo_restante_bloqueo = self.tiempo_tfp
             self.tipo_bloqueo = "tfp"
+            
+            # Registrar evento solo si TFP > 0
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_tfp',
+                'estado': 'bloqueado_sistema'
+            })
         else:
             self.tipo_bloqueo = None
-
-        # Registrar evento
-        self.resultados.append({
-            'tiempo': self.tiempo_actual,
-            'proceso': self.proceso_actual.nombre,
-            'evento': 'inicio_tfp',
-            'estado': 'bloqueado_sistema'
-        })
+            # Si TFP = 0, el proceso termina inmediatamente
+            self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual)
+            self.proceso_actual.estado = "terminado"
+            self.procesos_terminados.append(self.proceso_actual)
+            self.t_fin_por_proceso[self.proceso_actual.nombre] = self.tiempo_actual
+            self.t_ultimo_tfp = self.tiempo_actual
+            
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'terminacion',
+                'estado': 'terminado'
+            })
 
     
     def procesar_tiempo_bloqueo(self):
@@ -395,12 +428,13 @@ class FCFS:
                     
                     # Si es TIP, el proceso pasa a estado listo
                     if self.tipo_bloqueo == 'tip':
-                        self.proceso_actual.estado = "listo"
+                        # Después del TIP, el proceso pasa directamente a ejecutarse
+                        self.proceso_actual.estado = "ejecutando"
                         self.resultados.append({
                             'tiempo': self.tiempo_actual,
                             'proceso': self.proceso_actual.nombre,
-                            'evento': 'tip_consumido',
-                            'estado': 'listo'
+                            'evento': 'inicio ejecucion',
+                            'estado': 'ejecutando'
                         })
                     else:
                         # Si es TCP, el proceso puede empezar a ejecutarse

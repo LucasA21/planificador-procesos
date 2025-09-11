@@ -198,7 +198,7 @@ class ExportadorPDF:
                 estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#17A2B8')))  # Azul claro
             elif tipo_evento == 'listo':
                 estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#20C997')))  # Verde claro
-            elif tipo_evento in ['inicio ejecucion', 'fin ejecucion', 'fin_ejecucion']:
+            elif tipo_evento in ['inicio ejecucion', 'inicio_ejecucion', 'fin ejecucion', 'fin_ejecucion']:
                 estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#28A745')))  # Verde
             elif tipo_evento == 'inicio_io':
                 estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#DC3545')))  # Rojo
@@ -417,7 +417,7 @@ class ExportadorPDF:
                     'tipo': tipo_evento,
                     'fin': None
                 })
-            elif tipo_evento == 'bloqueo':
+            elif tipo_evento in ['fin ejecucion', 'fin_ejecucion']:
                 # Buscar el segmento de ejecución para cerrarlo
                 for segmento in reversed(procesos[proceso_nombre]['segmentos']):
                     if segmento['fin'] is None and segmento['tipo'] == 'inicio ejecucion':
@@ -437,7 +437,7 @@ class ExportadorPDF:
                         segmento['fin'] = tiempo  # I/O termina en fin_io (inclusive)
                         break
             elif tipo_evento == 'terminacion':
-                # Buscar el segmento de ejecución para cerrarlo
+                # Buscar el segmento de ejecución para cerrarlo (usando fin ejecucion)
                 for segmento in reversed(procesos[proceso_nombre]['segmentos']):
                     if segmento['fin'] is None and segmento['tipo'] == 'inicio ejecucion':
                         segmento['fin'] = tiempo
@@ -449,7 +449,7 @@ class ExportadorPDF:
         """Encuentra el proceso que va a ejecutarse después de un evento del sistema."""
         for evento in eventos:
             if (evento.get('tiempo', 0) >= tiempo_inicio and 
-                evento.get('evento') == 'inicio ejecucion'):
+                evento.get('evento') in ['inicio ejecucion', 'inicio_ejecucion']):
                 return evento.get('proceso', '')
         return None
     
