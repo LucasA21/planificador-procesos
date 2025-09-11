@@ -3,6 +3,7 @@ Módulo de integración entre la lógica de algoritmos y la interfaz de usuario.
 """
 
 import os
+import sys
 from datetime import datetime
 from .proceso import Proceso
 from .algoritmos.FCFS import FCFS
@@ -183,7 +184,19 @@ class Simulador:
             return
         
         # Crear directorio de salida si no existe
-        output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'output')
+        if hasattr(sys, '_MEIPASS'):
+            # Ejecutable empaquetado - guardar en el directorio del ejecutable
+            if hasattr(sys, 'frozen'):
+                # PyInstaller
+                base_dir = os.path.dirname(sys.executable)
+            else:
+                # Otro empaquetador
+                base_dir = os.path.dirname(sys.executable)
+            output_dir = os.path.join(base_dir, 'output')
+        else:
+            # Desarrollo normal
+            output_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'output')
+        
         os.makedirs(output_dir, exist_ok=True)
         
         # Generar nombre de archivo con timestamp

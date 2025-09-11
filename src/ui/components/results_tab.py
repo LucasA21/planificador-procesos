@@ -398,13 +398,20 @@ class PestañaResultados(ctk.CTkFrame):
             import subprocess
             import platform
             
+            # Convertir a ruta absoluta y verificar que existe
+            ruta_absoluta = os.path.abspath(self.ruta_pdf_actual)
+            
+            if not os.path.exists(ruta_absoluta):
+                print(f"Error: El archivo PDF no existe en {ruta_absoluta}")
+                return
+            
             try:
                 if platform.system() == "Windows":
-                    os.startfile(self.ruta_pdf_actual)
+                    os.startfile(ruta_absoluta)
                 elif platform.system() == "Darwin":  # macOS
-                    subprocess.run(["open", self.ruta_pdf_actual])
+                    subprocess.run(["open", ruta_absoluta])
                 else:  # Linux
-                    subprocess.run(["xdg-open", self.ruta_pdf_actual])
+                    subprocess.run(["xdg-open", ruta_absoluta])
             except Exception as e:
                 print(f"Error al abrir el PDF: {e}")
     
