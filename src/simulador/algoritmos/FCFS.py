@@ -74,7 +74,7 @@ class FCFS:
                     'tiempo': self.tiempo_actual,
                     'proceso': proceso.nombre,
                     'evento': 'llegada',
-                    'estado': 'listo'
+                    'estado': 'arrivo'
                 })
 
     def insertar_ordenado(self, proceso):
@@ -392,14 +392,25 @@ class FCFS:
                 elif self.tipo_bloqueo in ['tip', 'tcp'] and self.proceso_actual is not None:
                     # Para TIP y TCP, usar el proceso actual
                     nombre_proceso = self.proceso_actual.nombre
-                    # Cuando termina TIP o TCP, el proceso puede empezar a ejecutarse
-                    self.proceso_actual.estado = "ejecutando"
-                    self.resultados.append({
-                        'tiempo': self.tiempo_actual,
-                        'proceso': self.proceso_actual.nombre,
-                        'evento': 'inicio ejecucion',
-                        'estado': 'ejecutando'
-                    })
+                    
+                    # Si es TIP, el proceso pasa a estado listo
+                    if self.tipo_bloqueo == 'tip':
+                        self.proceso_actual.estado = "listo"
+                        self.resultados.append({
+                            'tiempo': self.tiempo_actual,
+                            'proceso': self.proceso_actual.nombre,
+                            'evento': 'tip_consumido',
+                            'estado': 'listo'
+                        })
+                    else:
+                        # Si es TCP, el proceso puede empezar a ejecutarse
+                        self.proceso_actual.estado = "ejecutando"
+                        self.resultados.append({
+                            'tiempo': self.tiempo_actual,
+                            'proceso': self.proceso_actual.nombre,
+                            'evento': 'inicio ejecucion',
+                            'estado': 'ejecutando'
+                        })
 
                 # Registrar evento de fin con el nombre del proceso correcto
                 if nombre_proceso:

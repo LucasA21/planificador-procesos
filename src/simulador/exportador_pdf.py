@@ -196,6 +196,8 @@ class ExportadorPDF:
             # Colores que coinciden con el diagrama de Gantt
             if tipo_evento == 'llegada':
                 estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#17A2B8')))  # Azul claro
+            elif tipo_evento == 'listo':
+                estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#20C997')))  # Verde claro
             elif tipo_evento in ['inicio ejecucion', 'fin ejecucion', 'fin_ejecucion']:
                 estilos_tabla.append(('TEXTCOLOR', (0, i), (3, i), colors.HexColor('#28A745')))  # Verde
             elif tipo_evento == 'inicio_io':
