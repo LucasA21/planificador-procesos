@@ -8,6 +8,7 @@ from datetime import datetime
 from .proceso import Proceso
 from .algoritmos.FCFS import FCFS
 from .algoritmos.SPN import SPN
+from .algoritmos.SRTN import SRTN
 from .exportador_pdf import ExportadorPDF
 
 class Simulador:
@@ -106,6 +107,37 @@ class Simulador:
         
         return resultados
     
+    def ejecutar_srtn(self, procesos_datos, tiempo_tip, tiempo_tcp, tiempo_tfp):
+        """
+        Ejecuta el algoritmo SRTN con los datos proporcionados.
+        
+        Args:
+            procesos_datos: Lista de diccionarios con datos de procesos
+            tiempo_tip: Tiempo de ingreso de proceso
+            tiempo_tcp: Tiempo de conmutación de proceso
+            tiempo_tfp: Tiempo de finalización de proceso
+            
+        Returns:
+            Diccionario con resultados de la simulación
+        """
+        # Convertir datos a instancias de Proceso
+        self.procesos = self.crear_procesos_desde_datos(procesos_datos)
+        
+        # Crear instancia del algoritmo SRTN
+        self.algoritmo_actual = SRTN(self.procesos, tiempo_tip, tiempo_tcp, tiempo_tfp)
+        
+        # Ejecutar la simulación
+        self.algoritmo_actual.ejecutar()
+        
+        # Procesar resultados para la interfaz
+        resultados = self._procesar_resultados_srtn()
+        
+        # Agregar ruta del PDF a los resultados
+        if 'ruta_pdf' not in resultados:
+            resultados['ruta_pdf'] = None
+        
+        return resultados
+    
     def _procesar_resultados_fcfs(self):
         """
         Procesa los resultados del algoritmo FCFS para mostrarlos en la interfaz.
@@ -167,6 +199,64 @@ class Simulador:
     def _procesar_resultados_spn(self):
         """
         Procesa los resultados del algoritmo SPN para mostrarlos en la interfaz.
+        
+        Returns:
+            Diccionario con datos formateados para la interfaz
+        """
+        if not self.algoritmo_actual:
+            return {}
+        
+        # Obtener procesos terminados
+        procesos_terminados = self.algoritmo_actual.procesos_terminados
+        
+        # Procesar datos por proceso - ordenar por nombre para mostrar P1, P2, P3, etc.
+        datos_procesos = []
+        for proceso in sorted(procesos_terminados, key=lambda p: p.nombre):
+            datos_procesos.append({
+                'nombre': proceso.nombre,
+                'tiempo_retorno': proceso.tiempo_retorno,
+                'tiempo_retorno_normalizado': round(proceso.tiempo_retorno_normalizado, 2),
+                'tiempo_estado_listo': proceso.tiempo_en_listo
+            })
+        
+        # Obtener estadísticas de CPU calculadas correctamente
+        stats_cpu = self.algoritmo_actual.obtener_estadisticas_cpu()
+        
+        # Calcular estadísticas de la tanda
+        if procesos_terminados:
+            tiempos_retorno = [p.tiempo_retorno for p in procesos_terminados]
+            tiempo_medio_retorno = sum(tiempos_retorno) / len(tiempos_retorno)
+            tiempo_total = stats_cpu['t_total']
+        else:
+            tiempo_medio_retorno = 0
+            tiempo_total = 0
+        
+        # Usar estadísticas calculadas correctamente
+        tiempo_cpu_procesos = stats_cpu['cpu_proc']
+        tiempo_cpu_so = stats_cpu['cpu_so']
+        tiempo_cpu_desocupada = stats_cpu['cpu_idle']
+        
+        # Procesar datos para el diagrama de Gantt
+        datos_gantt = self._procesar_datos_gantt()
+        
+        # Exportar reporte PDF y capturar la ruta
+        ruta_pdf = self.exportar_pdf()
+
+        return {
+            'procesos': datos_procesos,
+            'tiempo_total': tiempo_total,
+            'tiempo_medio_retorno': tiempo_medio_retorno,
+            'cpu_desocupada': f"{tiempo_cpu_desocupada} ({tiempo_cpu_desocupada/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
+            'cpu_so': f"{tiempo_cpu_so} ({tiempo_cpu_so/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
+            'cpu_procesos': f"{tiempo_cpu_procesos} ({tiempo_cpu_procesos/tiempo_total*100:.1f}%)" if tiempo_total > 0 else "0 (0%)",
+            'gantt': datos_gantt,
+            'eventos': self.algoritmo_actual.resultados,
+            'ruta_pdf': ruta_pdf
+        }
+    
+    def _procesar_resultados_srtn(self):
+        """
+        Procesa los resultados del algoritmo SRTN para mostrarlos en la interfaz.
         
         Returns:
             Diccionario con datos formateados para la interfaz
