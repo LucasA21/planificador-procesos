@@ -1,42 +1,29 @@
-"""
-Implementacion del algoritmo SPN (Shortest Process Next).
-
-Este algoritmo NO apropiativo, prioriza los procesos con menor duracion de rafaga de cpu.
-Cosas a considerar:
-- El algoritmo ejecuta los procesos por orden de arrivo, en el caso que un proceso P1 arriva primero
-y se arrancar a ejecutar, este va a terminar de ejecutarse y recien ahi va a verificar cual es el proceso a ejecutar
-a continuacion, en el caso que haya mas de un proceso en la cola de listos va a evaluar cual tiene menor duracion de 
-rafaga de cpu y lo va a ejecutar.
-- En el caso de que P1 tenga una duracion de 3 tiempos en su rafaga y una duracion de I/O de 2 tiempos, P1
-arranca ejecutando y llega P2 con una duracion de 2 tiempos en su rafaga y una duracion de I/O de 1 tiempo,
-Cuando p1 termine de ejecutar se va a ejecutar P2, En el caso de que p2 termine en el tiempo 10, p1 va a querer
-ejecutar entonces va a procesarse un TCP en el tiempo 11, pero justo en ese tiempo P2, ya termino su IO y se puso en 
-la cola de listos, P2 se va a ejecutar directamente sin consumir un TCP ya que ya lo consumio P1 al querer empezar a ejecutar,
-es decir el TCP se consume solo una vez antes de ejecutar un proceso, no se repite si otro proceso con menor rafaga de cpu justo
-se metio a la cola de listos.
-"""
-from ..proceso import Proceso
-
-
 class SPN:
     def __init__(self, procesos, tiempo_tip, tiempo_tcp, tiempo_tfp):
         self.procesos = procesos
-        # Instante de tiempo actual del puntero
+        
+        # Instante del tiempo actual
         self.tiempo_actual = 0
+        
         # No hay procesos ejecutandose en la primera instancia de tiempo
         self.proceso_actual = None
+        
         # Colas vacias
         self.cola_listos = []
         self.procesos_bloqueados = []
         self.procesos_terminados = []
+        
         # Lista para guardar los eventos que fueron sucediendo
         self.resultados = []
 
+        # Tiempos del SO
         self.tiempo_tip = tiempo_tip
         self.tiempo_tcp = tiempo_tcp
         self.tiempo_tfp = tiempo_tfp
 
         self.tiempo_restante_bloqueo = 0
+        
+        # TIP, TCP O TFP
         self.tipo_bloqueo = None
         
         # Contadores de CPU para mediciones correctas
@@ -54,8 +41,6 @@ class SPN:
         self.t_fin_por_proceso = {}
         self.t_listo_por_proceso = {}
         
-        # Variable especial para SPN: control de TCP ya aplicado
-        self.tcp_ya_aplicado = False
 
     def procesar_llegadas(self):
         for proceso in self.procesos:
@@ -147,11 +132,11 @@ class SPN:
             self.tiempo_actual += 1
         
         if iteraciones >= tiempo_maximo:
-            print(f"⚠️ Advertencia: Simulación terminada por límite de tiempo ({tiempo_maximo} iteraciones)")
+            print(f"Advertencia: Simulación terminada por límite de tiempo ({tiempo_maximo} iteraciones)")
             print(f"Estado final - Tiempo: {self.tiempo_actual}, Iteraciones: {iteraciones}")
     
     def obtener_estadisticas_cpu(self):
-        """Retorna las estadísticas de CPU calculadas correctamente."""
+        """Retorna las estadísticas de CPU."""
         # Calcular T_total = t_ultimo_TFP - t_primer_arribo
         if self.t_primer_arribo is not None and self.t_ultimo_tfp is not None:
             # Si hay TFP, usar t_ultimo_tfp directamente
@@ -165,7 +150,7 @@ class SPN:
         # Verificar que CPU_idle sea correcto
         cpu_idle_calculado = t_total - (self.cpu_proc + self.cpu_so)
         if cpu_idle_calculado < 0:
-            print(f"⚠️ Advertencia: CPU_idle calculado es negativo: {cpu_idle_calculado}")
+            print(f"Advertencia: CPU_idle calculado es negativo: {cpu_idle_calculado}")
             print(f"CPU_proc: {self.cpu_proc}, CPU_SO: {self.cpu_so}, T_total: {t_total}")
         
         return {
@@ -201,35 +186,18 @@ class SPN:
     def seleccionar_siguiente_proceso(self):
         """
         Selecciona el proceso con menor duración de ráfaga de CPU.
-        Implementa la lógica especial del TCP según las consideraciones.
+        La cola ya está ordenada por SPN, por lo que solo se toma el primero.
         """
         if len(self.cola_listos) > 0:
-            # Ordenar la cola por duración de ráfaga de CPU (menor primero)
-            self.cola_listos.sort(key=lambda p: p.get_duracion_rafagas_cpu())
-            
-            # Seleccionar el primer proceso (menor duración)
+            # Seleccionar el primer proceso (menor duración, ya está ordenado)
             self.proceso_actual = self.cola_listos.pop(0)
             
             # Aplicar TIP o TCP según corresponda
             if self.proceso_actual.proceso_nuevo:
                 self.aplicar_tip()
                 self.proceso_actual.proceso_nuevo = False
-                self.tcp_ya_aplicado = False  # Resetear flag para nuevo proceso
             else:
-                # Solo aplicar TCP si no se ha aplicado ya
-                if not self.tcp_ya_aplicado:
-                    self.aplicar_tcp()
-                    self.tcp_ya_aplicado = True
-                else:
-                    # TCP ya aplicado, proceso pasa directamente a ejecutándose
-                    self.tipo_bloqueo = None
-                    self.proceso_actual.estado = "ejecutando"
-                    self.resultados.append({
-                        'tiempo': self.tiempo_actual,
-                        'proceso': self.proceso_actual.nombre,
-                        'evento': 'inicio ejecucion',
-                        'estado': 'ejecutando'
-                    })
+                self.aplicar_tcp()
     
     def hay_procesos_pendientes(self):
         """
@@ -338,9 +306,8 @@ class SPN:
                     # Reiniciar duracion de CPU para la siguiente ejecución
                     proceso.duracion_rafagas_cpu = proceso.get_duracion_rafagas_cpu()
 
-                    # IMPORTANTE: Los procesos que vuelven de I/O van al FINAL de la cola
-                    # pero se reordenarán automáticamente por SPN en la siguiente selección
-                    self.cola_listos.append(proceso)
+                    # Insertar el proceso en la cola de listos manteniendo el orden SPN
+                    self.insertar_ordenado(proceso)
 
                     # Registrar evento de fin de I/O en el tiempo actual del simulador
                     self.resultados.append({
@@ -447,7 +414,60 @@ class SPN:
                     # Para TIP y TCP, usar el proceso actual
                     nombre_proceso = self.proceso_actual.nombre
                     
-                    # Si es TIP, el proceso pasa a estado listo
+                    # Verificar si hay un proceso más prioritario en la cola de listos
+                    if len(self.cola_listos) > 0:
+                        # Ordenar la cola por duración de ráfaga de CPU (menor primero)
+                        self.cola_listos.sort(key=lambda p: p.get_duracion_rafagas_cpu())
+                        
+                        # Verificar si el primer proceso en la cola es más prioritario
+                        proceso_mas_prioritario = self.cola_listos[0]
+                        if (proceso_mas_prioritario.get_duracion_rafagas_cpu() < 
+                            self.proceso_actual.get_duracion_rafagas_cpu()):
+                            
+                            # El proceso actual debe volver a la cola de listos
+                            # Restaurar la duración original de la ráfaga de CPU
+                            self.proceso_actual.duracion_rafagas_cpu = self.proceso_actual.get_duracion_rafagas_cpu()
+                            # Asegurar que el proceso esté en estado listo
+                            self.proceso_actual.estado = "listo"
+                            # Restar 1 al contador de CPU del proceso que cede la CPU
+                            self.cpu_proc -= 1
+                            self.cpu_proc_por_proceso[self.proceso_actual.nombre] -= 1
+                            self.insertar_ordenado(self.proceso_actual)
+                            self.proceso_actual = None
+                            
+                            # El proceso más prioritario debe ejecutarse directamente
+                            # (sin ejecutar TCP ya que el TCP ya fue consumido)
+                            self.proceso_actual = self.cola_listos.pop(0)
+                            self.proceso_actual.estado = "ejecutando"
+                            
+                            # Registrar evento de cambio de proceso
+                            self.resultados.append({
+                                'tiempo': self.tiempo_actual,
+                                'proceso': self.proceso_actual.nombre,
+                                'evento': 'cambio_proceso_spn',
+                                'estado': 'ejecutando'
+                            })
+                            
+                            # Registrar evento de inicio de ejecución
+                            self.resultados.append({
+                                'tiempo': self.tiempo_actual,
+                                'proceso': self.proceso_actual.nombre,
+                                'evento': 'inicio ejecucion',
+                                'estado': 'ejecutando'
+                            })
+                            
+                            # Registrar evento de fin con el nombre del proceso correcto
+                            if nombre_proceso:
+                                self.resultados.append({
+                                    'tiempo': self.tiempo_actual,
+                                    'proceso': nombre_proceso,
+                                    'evento': f'fin_{self.tipo_bloqueo}',
+                                    'estado': 'sistema_libre'
+                                })
+                            self.tipo_bloqueo = None
+                            return False  # No está bloqueado, el proceso puede ejecutarse
+                    
+                    # Si no hay proceso más prioritario, continuar con el proceso actual
                     if self.tipo_bloqueo == 'tip':
                         # Después del TIP, el proceso pasa directamente a ejecutarse
                         self.proceso_actual.estado = "ejecutando"

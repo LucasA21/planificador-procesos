@@ -921,6 +921,40 @@ Este simulador está diseñado para ser extensible y mantenible. La separación 
 Siguiendo esta guía, podrás implementar cualquier algoritmo de planificación de procesos y integrarlo completamente con la interfaz de usuario existente.
 
 
+
+
+
+
+El algoritmo SPN actual funciona muy bien, acomoda los procesos con menor duracion de rafaga en la cola de listos y los va a ejecutando, pero tiene un pequeño error que hace que los resultados no sean correctos, te lo voy a explicar detalladamente para que me ayudes a resolverlo:
+En el caso de que un proceso P1 con una duracion de rafaga de 2 tiempos y una duracion de IO de 1 tiempo, termine su IO en el tiempo 7, anteriormente un proceso P2 quiere ejecutarse (con una duracion de rafaga de 3 tiempos y una duracion de IO de 2 tiempos), como p1 esta bloqueado en el tiempo 7 el proceso P2 manda a ejecutar el TCP para poder meterse el a ejecutar en el tiempo 8, pero que pasa en el tiempo 7 al mismo tiempo que p2 mando a ejecutar el tcp para entrar, p1 volvio a la cola de listos, por lo cual el proceso que deberia ejecutarse deberia ser P1, ya que su dduracion de rafaga de cpu es menor a la de p2, p1 deberia ejecutarse directamente en el tiempo 8 ya que el TCP ya fue consumido en el tiempo 7 por p2. (Los tiempos y procesos de este ejemplo, son un ejemplos, esto deberia funcionar para cualquier procesos, y en cualquier instantes de tiempo). Lo que debe pasar es que si un proceso termina de ejecutar el TCP para entrar a usar la cpu y en ese instante llega otro proceso con menor duracion de rafaga de cpu, ese proceso empieza a ejecutar(sin ejecutar su tcp) y el otro proceso se manda otra vez a la cola de listos. Haz un debug con los siguientes procesos: 
+
+{
+    "nombre": "P1",
+    "tiempo_arribo": 0,
+    "cantidad_rafagas_cpu": 4,
+    "duracion_rafaga_cpu": 3,
+    "duracion_rafaga_es": 2,
+    "prioridad_externa": 3
+  },
+  {
+    "nombre": "P3",
+    "tiempo_arribo": 3,
+    "cantidad_rafagas_cpu": 5,
+    "duracion_rafaga_cpu": 2,
+    "duracion_rafaga_es": 1,
+    "prioridad_externa": 4
+  },
+  {
+    "nombre": "P4",
+    "tiempo_arribo": 6,
+    "cantidad_rafagas_cpu": 3,
+    "duracion_rafaga_cpu": 6,
+    "duracion_rafaga_es": 4,
+    "prioridad_externa": 2
+  },
+
+Para que sepas que el algoritmo funciona bien, P3 debe terminar en el tiempo 19 y p1 en el tiempo 46
+
 TIEMPO: "0" , PROCESO: "P1", EVENTO: "LLEGADA", ESTADO:"ARRIVO",
 TIEMPO: "0" , PROCESO: "P1", EVENTO: "INICIO_TIP", ESTADO:"bloqueado_sistema",
 TIEMPO: "1" , PROCESO: "P2", EVENTO: "LLEGADA", ESTADO:"ARRIVO",
