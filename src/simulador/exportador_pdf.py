@@ -115,7 +115,7 @@ class ExportadorPDF:
         contenido = []
         
         # Título principal
-        titulo = Paragraph("Reporte de Simulación - Algoritmo FCFS", self.estilos['TituloPrincipal'])
+        titulo = Paragraph("Reporte de Simulación", self.estilos['TituloPrincipal'])
         contenido.append(titulo)
         contenido.append(Spacer(1, 30))
         

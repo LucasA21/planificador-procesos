@@ -357,6 +357,13 @@ class VentanaPrincipal(ctk.CTk):
                 parametros['tcp'],
                 parametros['tfp']
             )
+        elif politica == "SPN":
+            resultados = simulador.ejecutar_spn(
+                self.procesos_cargados,
+                parametros['tip'],
+                parametros['tcp'],
+                parametros['tfp']
+            )
         else:
             # Para otros algoritmos, mostrar mensaje de no implementado
             self.pestaña_resultados.mostrar_mensaje_inicial()
