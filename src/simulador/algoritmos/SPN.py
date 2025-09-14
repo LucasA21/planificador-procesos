@@ -148,7 +148,7 @@ class SPN:
             t_total = 0
         
         # Verificar que CPU_idle sea correcto
-        cpu_idle_calculado = t_total - (self.cpu_proc + self.cpu_so)
+        cpu_idle_calculado = (t_total + 1) - (self.cpu_proc + self.cpu_so)
         if cpu_idle_calculado < 0:
             print(f"Advertencia: CPU_idle calculado es negativo: {cpu_idle_calculado}")
             print(f"CPU_proc: {self.cpu_proc}, CPU_SO: {self.cpu_so}, T_total: {t_total}")
