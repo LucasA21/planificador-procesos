@@ -925,16 +925,21 @@ Siguiendo esta guía, podrás implementar cualquier algoritmo de planificación 
 
 
 
-El algoritmo SPN actual funciona muy bien, acomoda los procesos con menor duracion de rafaga en la cola de listos y los va a ejecutando, pero tiene un pequeño error que hace que los resultados no sean correctos, te lo voy a explicar detalladamente para que me ayudes a resolverlo:
-En el caso de que un proceso P1 con una duracion de rafaga de 2 tiempos y una duracion de IO de 1 tiempo, termine su IO en el tiempo 7, anteriormente un proceso P2 quiere ejecutarse (con una duracion de rafaga de 3 tiempos y una duracion de IO de 2 tiempos), como p1 esta bloqueado en el tiempo 7 el proceso P2 manda a ejecutar el TCP para poder meterse el a ejecutar en el tiempo 8, pero que pasa en el tiempo 7 al mismo tiempo que p2 mando a ejecutar el tcp para entrar, p1 volvio a la cola de listos, por lo cual el proceso que deberia ejecutarse deberia ser P1, ya que su dduracion de rafaga de cpu es menor a la de p2, p1 deberia ejecutarse directamente en el tiempo 8 ya que el TCP ya fue consumido en el tiempo 7 por p2. (Los tiempos y procesos de este ejemplo, son un ejemplos, esto deberia funcionar para cualquier procesos, y en cualquier instantes de tiempo). Lo que debe pasar es que si un proceso termina de ejecutar el TCP para entrar a usar la cpu y en ese instante llega otro proceso con menor duracion de rafaga de cpu, ese proceso empieza a ejecutar(sin ejecutar su tcp) y el otro proceso se manda otra vez a la cola de listos. Haz un debug con los siguientes procesos: 
-
-{
+Bueno te explico lo que tenes que hacer a continuacion, ya tenenmos implementandos a la perfeccion el algoritmo fcfs y spn, ahora debemos implementar SRTN, este algoritmo debe funcionar identico al SPN(mismo codigo), solo que hay que agregarle algunas funcionalidades: si se esta ejecutando un proceso y llega un proceso a la cola de listos con menor rafagas de cpu que el proceso actual, el proceso actual debe volver a la cola de listos, con su duracion de rafaga restante( es decir si ya ejecuto 3 tiempos de rafaga y el total era 6, debe volver a la lista con 3 tiempos de rafaga no con 6) cada vez que se haga un cambio de proceso por este motivo se debe ejecutar un tcp, en el caso de que sea un proceso nuevo se debe ejecutar tanto el tip correspondiente y luego el tcp y luego recien puede ejecutar. Ten en cuenta los archivos "SRTN2" y "SRTN3" , son dos algoritmos srtn implementados por unos amigos, esos algoritmos estan funcionales asi que te podes guiar un poco de ahi. Una vez que termines haz un debug detallado con estos procesos: {
     "nombre": "P1",
     "tiempo_arribo": 0,
     "cantidad_rafagas_cpu": 4,
     "duracion_rafaga_cpu": 3,
     "duracion_rafaga_es": 2,
     "prioridad_externa": 3
+  },
+  {
+    "nombre": "P2",
+    "tiempo_arribo": 1,
+    "cantidad_rafagas_cpu": 2,
+    "duracion_rafaga_cpu": 8,
+    "duracion_rafaga_es": 5,
+    "prioridad_externa": 1
   },
   {
     "nombre": "P3",
@@ -952,33 +957,11 @@ En el caso de que un proceso P1 con una duracion de rafaga de 2 tiempos y una du
     "duracion_rafaga_es": 4,
     "prioridad_externa": 2
   },
-
-Para que sepas que el algoritmo funciona bien, P3 debe terminar en el tiempo 19 y p1 en el tiempo 46
-
-TIEMPO: "0" , PROCESO: "P1", EVENTO: "LLEGADA", ESTADO:"ARRIVO",
-TIEMPO: "0" , PROCESO: "P1", EVENTO: "INICIO_TIP", ESTADO:"bloqueado_sistema",
-TIEMPO: "1" , PROCESO: "P2", EVENTO: "LLEGADA", ESTADO:"ARRIVO",
-TIEMPO: "1" , PROCESO: "P1", EVENTO: "fin_tip", ESTADO:"sistena_libre",
-TIEMPO: "1" , PROCESO: "P1", EVENTO: "inicio_ejecucion", ESTADO:"ejecutando",
-TIEMPO: "3" , PROCESO: "P3", EVENTO: "LLEGADA", ESTADO:"ARRIVO",
-TIEMPO: "3" , PROCESO: "P1", EVENTO: "fin_ejecucion", ESTADO:"ejecutando",
-TIEMPO: "3" , PROCESO: "P1", EVENTO: "bloqueo", ESTADO:"bloqueado",
-TIEMPO: "4" , PROCESO: "P1", EVENTO: "inicio_io", ESTADO:"bloqueado",
-TIEMPO: "5" , PROCESO: "P3", EVENTO: "inicio_tip", ESTADO:"bloqueado_sistema",
-TIEMPO: "6" , PROCESO: "P3", EVENTO: "fin_tip", ESTADO:"sistena_libre",
-TIEMPO: "6" , PROCESO: "P3", EVENTO: "inicio_ejecucion", ESTADO:"ejecutando",
-TIEMPO: "6" , PROCESO: "P1", EVENTO: "fin_io", ESTADO:"listo",
-TIEMPO: "8" , PROCESO: "P3", EVENTO: "fin_ejecucion", ESTADO:"ejecutando",
-TIEMPO: "8" , PROCESO: "P3", EVENTO: "bloqueo", ESTADO:"bloqueado",
-TIEMPO: "9" , PROCESO: "P3", EVENTO: "inicio_io", ESTADO:"bloqueado",
-TIEMPO: "9" , PROCESO: "P3", EVENTO: "fin_io", ESTADO:"listo",
-TIEMPO: "9" , PROCESO: "P1", EVENTO: "inicio_tcp", ESTADO:"bloqueado_sistema",
-TIEMPO: "10" , PROCESO: "P1", EVENTO: "fin_tcp", ESTADO:"sistema_libre",
-TIEMPO: "10" , PROCESO: "P3", EVENTO: "inicio_ejecucion", ESTADO:"ejecutando",
-TIEMPO: "12" , PROCESO: "P3", EVENTO: "fin_ejecucion", ESTADO:"ejecutando",
-TIEMPO: "13" , PROCESO: "P3", EVENTO: "bloqueo", ESTADO:"bloqueado",
-TIEMPO: "14" , PROCESO: "P3", EVENTO: "inicio_io", ESTADO:"bloqueado",
-TIEMPO: "14" , PROCESO: "P3", EVENTO: "fin_io", ESTADO:"bloqueado",
-TIEMPO: "14" , PROCESO: "P1", EVENTO: "inicio_tcp", ESTADO:"bloqueado_sistema",
-TIEMPO: "14" , PROCESO: "P1", EVENTO: "fin_tcp", ESTADO:"sistema_libre",
-TIEMPO: "15" , PROCESO: "P3", EVENTO: "inicio_ejecucion", ESTADO:"ejecutando",
+  {
+    "nombre": "P5",
+    "tiempo_arribo": 10,
+    "cantidad_rafagas_cpu": 1,
+    "duracion_rafaga_cpu": 10,
+    "duracion_rafaga_es": 0,
+    "prioridad_externa": 5
+  }, la forma de ejecutar es con "poetry run python archivo.py", para que el algoritmo este correcto debe devolver estos datos(imagen)
