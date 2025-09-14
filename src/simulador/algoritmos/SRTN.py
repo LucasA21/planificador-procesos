@@ -98,7 +98,11 @@ class SRTN:
     '''
     def ejecutar(self):
         
-        while self.hay_procesos_pendientes():
+        tiempo_maximo = 1000
+        iteraciones = 0
+        
+        while self.hay_procesos_pendientes() and iteraciones < tiempo_maximo:
+            iteraciones += 1
             
             self.procesar_llegadas()
 
@@ -214,11 +218,249 @@ class SRTN:
 
         for proceso in self.procesos_bloqueados:
             if proceso.tiempo_bloqueo < self.tiempo_actual:
-                proceso.duracion_rafaga_io -= 1
+                proceso.duracion_rafagas_io -= 1
 
-                if proceso.duracion_rafaga_io == 0:
-                    pass
+                if proceso.duracion_rafagas_io == 0:
+                    procesos_que_terminarion_io.append(proceso)
+                    proceso.estado = "listo"
+                    
+                    # Reiniciar duracion de CPU para la siguiente ejecucion
+                    proceso.duracion_rafagas_cpu = proceso.get_duracion_rafagas_cpu()
 
+                    self.insertar_ordenado(proceso)
+                    
+                    self.resultados.append({
+                        'tiempo': self.tiempo_actual,
+                        'proceso': proceso.nombre,
+                        'evento': 'fin_io',
+                        'estado': 'listo'
+                    })
+        for proceso in procesos_que_terminarion_io:
+            self.procesos_bloqueados.remove(proceso)
+            
+            
+    def aplicar_tip(self):
+        if self.tiempo_tip > 0:
+            self.tiempo_restante_bloqueo = self.tiempo_tip
+            self.tipo_bloqueo = "tip"
+            
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_tip',
+                'estado': 'bloqueado_sistema'
+            })
+        else:
+            # Si TIP = 0, el proceso pasa directamente a ejecutándose
+            self.tipo_bloqueo = None
+            self.proceso_actual.estado = "ejecutando"
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio ejecucion',
+                'estado': 'ejecutando'
+            })
+            
+    def aplicar_tcp(self):
+        if self.tiempo_tcp > 0:
+            self.tiempo_restante_bloqueo = self.tiempo_tcp
+            self.tipo_bloqueo = "tcp"
+            
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_tcp',
+                'estado': 'bloqueado_sistema'
+            })
+        else:
+            # Si TCP = 0, el proceso pasa directamente a ejecutando
+            self.tipo_bloqueo = None
+            self.proceso_actual.estado = "ejecutando"
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio ejecucion',
+                'estado': 'ejecutando'
+            })
+            
+    def aplicar_tfp(self):
+        if self.tiempo_tfp > 0:
+            self.tiempo_restante_bloqueo = self.tiempo_tfp
+            self.tipo_bloqueo = "tfp"
+            
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'inicio_tfp',
+                'estado': 'bloqueado_sistema'
+            })
+        else:
+            # Si TFP = 0, el proceso termina inmediatamente
+            self.tipo_bloqueo = None
+            self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual)
+            self.proceso_actual.estado = "terminado"
+            self.procesos_terminados.append(self.proceso_actual)
+            self.t_fin_por_proceso[self.proceso_actual.nombre] = self.tiempo_actual
+            self.t_ultimo_tfp = self.tiempo_actual
+            
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'terminacion',
+                'estado': 'terminado'
+            })
+ 
+            
+        
+    def procesar_tiempo_bloqueo(self):
+        if self.tiempo_restante_bloqueo > 0:
+            self.tiempo_restante_bloqueo -= 1
+            # Acumular tiempo de CPU en labores del SO
+            self.cpu_so += 1
+
+            if self.tiempo_restante_bloqueo == 0:
+                # Determinar el nombre del proceso para el evento de fin
+                nombre_proceso = None
+                if self.tipo_bloqueo == 'tfp':
+                    # Para TFP, buscar el proceso que está terminando
+                    for proceso in self.procesos_terminados:
+                        if proceso.estado == "terminando":
+                            nombre_proceso = proceso.nombre
+                            break
+                    self.finalizar_proceso_completamente()
+                elif self.tipo_bloqueo in ['tip', 'tcp'] and self.proceso_actual is not None:
+                    # Para TIP y TCP, usar el proceso actual
+                    nombre_proceso = self.proceso_actual.nombre
+                    
+                    # Verificar si hay un proceso más prioritario en la cola de listos
+                    if len(self.cola_listos) > 0:
+                        # Ordenar la cola por duración de ráfaga de CPU (menor primero)
+                        self.cola_listos.sort(key=lambda p: p.get_duracion_rafagas_cpu())
+                        
+                        # Verificar si el primer proceso en la cola es más prioritario
+                        proceso_mas_prioritario = self.cola_listos[0]
+                        if (proceso_mas_prioritario.get_duracion_rafagas_cpu() < 
+                            self.proceso_actual.get_duracion_rafagas_cpu()):
+                            
+                            # El proceso actual debe volver a la cola de listos
+                            # Restaurar la duración original de la ráfaga de CPU
+                            self.proceso_actual.duracion_rafagas_cpu = self.proceso_actual.get_duracion_rafagas_cpu()
+                            # Asegurar que el proceso esté en estado listo
+                            self.proceso_actual.estado = "listo"
+                            # Restar 1 al contador de CPU del proceso que cede la CPU
+                            self.cpu_proc -= 1
+                            self.cpu_proc_por_proceso[self.proceso_actual.nombre] -= 1
+                            self.insertar_ordenado(self.proceso_actual)
+                            self.proceso_actual = None
+                            
+                            # El proceso más prioritario debe ejecutarse directamente
+                            # (sin ejecutar TCP ya que el TCP ya fue consumido)
+                            self.proceso_actual = self.cola_listos.pop(0)
+                            self.proceso_actual.estado = "ejecutando"
+                            
+                            # Registrar evento de cambio de proceso
+                            self.resultados.append({
+                                'tiempo': self.tiempo_actual,
+                                'proceso': self.proceso_actual.nombre,
+                                'evento': 'cambio_proceso_spn',
+                                'estado': 'ejecutando'
+                            })
+                            
+                            # Registrar evento de inicio de ejecución
+                            self.resultados.append({
+                                'tiempo': self.tiempo_actual,
+                                'proceso': self.proceso_actual.nombre,
+                                'evento': 'inicio ejecucion',
+                                'estado': 'ejecutando'
+                            })
+                            
+                            # Registrar evento de fin con el nombre del proceso correcto
+                            if nombre_proceso:
+                                self.resultados.append({
+                                    'tiempo': self.tiempo_actual,
+                                    'proceso': nombre_proceso,
+                                    'evento': f'fin_{self.tipo_bloqueo}',
+                                    'estado': 'sistema_libre'
+                                })
+                            self.tipo_bloqueo = None
+                            return False  # No está bloqueado, el proceso puede ejecutarse
+                    
+                    # Si no hay proceso más prioritario, continuar con el proceso actual
+                    if self.tipo_bloqueo == 'tip':
+                        # Después del TIP, el proceso pasa directamente a ejecutarse
+                        self.proceso_actual.estado = "ejecutando"
+                        self.resultados.append({
+                            'tiempo': self.tiempo_actual,
+                            'proceso': self.proceso_actual.nombre,
+                            'evento': 'inicio ejecucion',
+                            'estado': 'ejecutando'
+                        })
+                    else:
+                        # Si es TCP, el proceso puede empezar a ejecutarse
+                        self.proceso_actual.estado = "ejecutando"
+                        self.resultados.append({
+                            'tiempo': self.tiempo_actual,
+                            'proceso': self.proceso_actual.nombre,
+                            'evento': 'inicio ejecucion',
+                            'estado': 'ejecutando'
+                        })
+
+                # Registrar evento de fin con el nombre del proceso correcto
+                if nombre_proceso:
+                    self.resultados.append({
+                        'tiempo': self.tiempo_actual,
+                        'proceso': nombre_proceso,
+                        'evento': f'fin_{self.tipo_bloqueo}',
+                        'estado': 'sistema_libre'
+                    })
+                self.tipo_bloqueo = None
+            
+            return True # Aun esta bloqueado
+        return False # Ya terminó el bloqueo        
+            
+    def terminar_proceso(self):
+        self.resultados.append({
+            'tiempo': self.tiempo_actual,
+            'proceso': self.proceso_actual.nombre,
+            'evento': 'fin_ejecucion',
+            'estado': 'ejecutando'
+        })
+        
+        if self.tiempo_tfp > 0:
+            self.aplicar_tfp()
+            self.proceso_actual.estado = "terminando"
+            self.procesos_terminados.append(self.proceso_actual)
+        else:
+            self.t_fin_por_proceso[self.proceso_actual.nombre] = self.tiempo_actual
+            self.proceso_actual.calcular_tiempo_retorno(self.tiempo_actual)
+            self.proceso_actual.estado = "terminado"
+            self.procesos_terminados.append(self.proceso_actual)
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'terminacion',
+                'estado': 'terminado'
+            })
+
+        self.proceso_actual = None
+    
+    def finalizar_proceso_completamente(self):
+        for proceso in self.procesos_terminados:
+            if proceso.estado == "terminando":
+                self.t_fin_por_proceso[proceso.nombre] = self.tiempo_actual
+                self.t_ultimo_tfp = self.tiempo_actual
+                
+                proceso.calcular_tiempo_retorno(self.tiempo_actual)
+                proceso.estado = "terminado"
+                
+                self.resultados.append({
+                    'tiempo': self.tiempo_actual,
+                    'proceso': proceso.nombre,
+                    'evento': 'terminacion',
+                    'estado': 'terminado'
+                })
+                break
+                
 
     def obtener_estadisticas_cpu(self):
         # Calcular T_total = t_ultimo_TFP - t_primer_arribo
