@@ -37,8 +37,8 @@ src/simulador/
     ├── __init__.py
     ├── FCFS.py              # Algoritmo FCFS implementado
     ├── SPN.py               # Algoritmo SPN implementado
-    ├── SRTN.py              # Algoritmo SRTN (por implementar)
-    ├── RoundRobin.py        # Algoritmo Round Robin (por implementar)
+    ├── SRTN.py              # Algoritmo SRTN implementado
+    ├── RR.py                # Algoritmo Round Robin implementado
     └── PrioridadExterna.py  # Algoritmo de Prioridad Externa (por implementar)
 ```
 
@@ -389,6 +389,156 @@ Esto demuestra que SPN es más eficiente que FCFS para procesos con diferentes d
 
 ---
 
+## Algoritmo Round Robin (RR)
+
+### Ubicación: `src/simulador/algoritmos/RR.py`
+
+El algoritmo Round Robin es un algoritmo apropiativo que asigna un tiempo fijo (quantum) a cada proceso. Si un proceso no termina su ráfaga de CPU dentro del quantum, es preemptado y vuelve a la cola de listos.
+
+### Características Específicas del Round Robin:
+
+#### 1. **Criterio de Selección**:
+- Selecciona procesos en orden de llegada (FCFS)
+- **Apropiativo**: Los procesos pueden ser interrumpidos por agotamiento del quantum
+- Usa una variable `quantum` para controlar el tiempo máximo de ejecución
+
+#### 2. **Lógica de Preemption**:
+- Cada proceso tiene un contador `quantum_restante`
+- Cuando el quantum se agota, el proceso es preemptado
+- El proceso preemptado vuelve a la cola de listos con su duración restante de ráfaga
+- Se aplica TCP al cambiar de proceso
+
+#### 3. **Gestión del Quantum**:
+- Se reinicia el quantum cada vez que se selecciona un nuevo proceso
+- El quantum se decrementa en cada unidad de tiempo de ejecución
+- Si un proceso termina su ráfaga antes de agotar el quantum, no se preempta
+
+### Diferencias Clave con FCFS y SPN:
+
+| Aspecto | FCFS | SPN | Round Robin |
+|---------|------|-----|-------------|
+| Criterio de selección | Orden de llegada | Menor duración de ráfaga | Orden de llegada |
+| Preemption | No | No | Sí (por quantum) |
+| Quantum | No aplica | No aplica | Sí (configurable) |
+| Eficiencia | Baja (convoy effect) | Buena para procesos cortos | Buena para procesos interactivos |
+
+### Atributos Específicos:
+
+#### Variables de Control:
+```python
+self.quantum = quantum                    # Tiempo de quantum configurado
+self.quantum_restante = 0                 # Tiempo restante del quantum actual
+```
+
+#### Métodos Específicos:
+```python
+def verificar_preemption_quantum(self):
+    """
+    Verifica si el proceso actual debe ser preemptado por agotamiento del quantum.
+    
+    Returns:
+        bool: True si debe ser preemptado, False en caso contrario
+    """
+
+def preemptar_proceso_actual(self):
+    """
+    Preempta el proceso actual y lo devuelve a la cola de listos.
+    
+    Flujo:
+    1. Cambia estado del proceso actual a "listo"
+    2. Lo inserta en la cola de listos (manteniendo orden FCFS)
+    3. Registra eventos de preemption y fin de ejecución
+    4. Limpia el proceso actual y reinicia el quantum
+    """
+```
+
+### Flujo de Ejecución Detallado:
+
+1. **Inicialización**: Se configura el quantum y se inicializan contadores
+2. **Bucle Principal**: Mientras haya procesos pendientes:
+   - **Llegadas**: Procesos que llegan se agregan a la cola en orden FCFS
+   - **Bloqueos del SO**: Se procesan TIP/TCP/TFP si están activos
+   - **Verificación de Preemption**: Se verifica si el quantum se agotó
+   - **Preemption**: Si se agotó el quantum, se preempta el proceso actual
+   - **Tiempo de Espera**: Se incrementa el tiempo en cola de procesos listos
+   - **Selección**: Si no hay proceso ejecutándose, se selecciona el primero de la cola
+   - **Ejecución**: Se ejecuta una unidad de tiempo del proceso actual
+   - **I/O**: Se procesan procesos bloqueados ejecutando I/O
+   - **CPU Idle**: Se calcula si la CPU está desocupada
+   - **Avance**: Se incrementa el tiempo
+
+### Eventos Específicos de Round Robin:
+
+- `preemption_quantum`: Proceso es preemptado por agotamiento del quantum
+- `fin_ejecucion`: Proceso termina su ejecución (por preemption o fin de ráfaga)
+- `inicio ejecucion`: Proceso comienza a ejecutarse (después de TIP/TCP)
+
+### Ejemplo de Funcionamiento:
+
+Con los procesos:
+- P1: llegada=0, duración_cpu=5, quantum=3
+- P2: llegada=1, duración_cpu=3, quantum=3
+- P3: llegada=2, duración_cpu=4, quantum=3
+
+**Secuencia de ejecución Round Robin**:
+1. Tiempo 0: P1 llega → se ejecuta P1 (quantum=3)
+2. Tiempo 1: P2 llega → espera en cola
+3. Tiempo 2: P3 llega → espera en cola
+4. Tiempo 3: P1 preemptado (quantum agotado) → P2 ejecuta (quantum=3)
+5. Tiempo 4: P2 termina ráfaga → P3 ejecuta (quantum=3)
+6. Tiempo 6: P3 preemptado (quantum agotado) → P1 ejecuta (quantum=3)
+7. Tiempo 7: P1 termina ráfaga → P3 ejecuta (quantum=3)
+
+### Integración en el Simulador:
+
+El algoritmo Round Robin está completamente integrado:
+
+```python
+# En simulador.py
+def ejecutar_rr(self, procesos_datos, tiempo_tip, tiempo_tcp, tiempo_tfp, quantum):
+    # Conversión de datos
+    self.procesos = self.crear_procesos_desde_datos(procesos_datos)
+    
+    # Creación del algoritmo Round Robin
+    self.algoritmo_actual = RR(self.procesos, tiempo_tip, tiempo_tcp, tiempo_tfp, quantum)
+    
+    # Ejecución y procesamiento de resultados
+    self.algoritmo_actual.ejecutar()
+    resultados = self._procesar_resultados_rr()
+    
+    return resultados
+```
+
+### Configuración del Quantum:
+
+El quantum se configura a través de la interfaz de usuario:
+- Se habilita el campo "Quantum" cuando se selecciona Round Robin
+- El valor por defecto debe ser configurado por el usuario
+- Se valida que el quantum sea un número entero positivo
+
+### Ventajas del Round Robin:
+
+1. **Equidad**: Todos los procesos reciben tiempo de CPU de manera equitativa
+2. **Respuesta**: Los procesos interactivos reciben respuesta rápida
+3. **Simplicidad**: Fácil de implementar y entender
+4. **Prevención de inanición**: No hay procesos que esperen indefinidamente
+
+### Desventajas del Round Robin:
+
+1. **Overhead**: El cambio frecuente de contexto puede ser costoso
+2. **Quantum crítico**: Si el quantum es muy pequeño, hay mucho overhead
+3. **Quantum grande**: Si el quantum es muy grande, se comporta como FCFS
+
+### Consideraciones de Implementación:
+
+1. **Gestión del Quantum**: Se debe decrementar en cada unidad de tiempo de ejecución
+2. **Preemption**: Se debe verificar en cada iteración del bucle principal
+3. **Orden de Cola**: Se mantiene el orden FCFS para la cola de listos
+4. **Eventos**: Se registran eventos específicos de preemption
+5. **TCP**: Se aplica TCP en cada cambio de proceso por preemption
+
+---
+
 ## Simulador Principal
 
 ### Ubicación: `src/simulador/simulador.py`
@@ -672,6 +822,14 @@ elif politica == "SPN":
         parametros['tcp'],
         parametros['tfp']
     )
+elif politica == "Round Robin":
+    resultados = simulador.ejecutar_rr(
+        self.procesos_cargados,
+        parametros['tip'],
+        parametros['tcp'],
+        parametros['tfp'],
+        parametros['quantum']
+    )
 
 # Actualizar interfaz con resultados
 if resultados:
@@ -825,6 +983,122 @@ elif politica == "Tu Algoritmo":
         parametros['tcp'],
         parametros['tfp']
     )
+```
+
+### Ejemplo: Algoritmo Round Robin (RR):
+
+```python
+class RR:
+    def __init__(self, procesos, tiempo_tip, tiempo_tcp, tiempo_tfp, quantum):
+        # ... inicialización igual que FCFS ...
+        self.quantum = quantum
+        self.quantum_restante = 0
+    
+    def ejecutar(self):
+        tiempo_maximo = 1000
+        iteraciones = 0
+        
+        while self.hay_procesos_pendientes() and iteraciones < tiempo_maximo:
+            iteraciones += 1
+            
+            self.procesar_llegadas()
+            
+            if self.procesar_tiempo_bloqueo():
+                self.procesar_procesos_bloqueados()
+                self.tiempo_actual += 1
+                continue
+            
+            # Verificar preemption por quantum
+            if self.verificar_preemption_quantum():
+                self.preemptar_proceso_actual()
+            
+            # Incrementar tiempo de espera
+            for proceso in self.cola_listos:
+                proceso.tiempo_en_listo += 1
+                if proceso.nombre in self.t_listo_por_proceso:
+                    self.t_listo_por_proceso[proceso.nombre] += 1
+            
+            if self.proceso_actual is None:
+                self.seleccionar_siguiente_proceso()
+            
+            if self.proceso_actual is not None:
+                self.ejecutar_proceso_actual()
+            
+            self.procesar_procesos_bloqueados()
+            
+            if (self.proceso_actual is None and 
+                self.tiempo_restante_bloqueo == 0 and 
+                len(self.cola_listos) == 0):
+                self.cpu_idle += 1
+            
+            self.tiempo_actual += 1
+    
+    def verificar_preemption_quantum(self):
+        """Verifica si el proceso actual debe ser preemptado por quantum."""
+        if self.proceso_actual is None:
+            return False
+        return self.quantum_restante <= 0
+    
+    def preemptar_proceso_actual(self):
+        """Preempta el proceso actual y lo devuelve a la cola."""
+        if self.proceso_actual is None:
+            return
+        
+        # Devolver a la cola de listos
+        self.proceso_actual.estado = "listo"
+        self.insertar_ordenado(self.proceso_actual)
+        
+        # Registrar eventos
+        self.resultados.append({
+            'tiempo': self.tiempo_actual,
+            'proceso': self.proceso_actual.nombre,
+            'evento': 'preemption_quantum',
+            'estado': 'listo'
+        })
+        
+        # Limpiar proceso actual
+        self.proceso_actual = None
+        self.quantum_restante = 0
+    
+    def seleccionar_siguiente_proceso(self):
+        """Selecciona el primer proceso de la cola (FCFS)."""
+        if len(self.cola_listos) > 0:
+            self.proceso_actual = self.cola_listos.pop(0)
+            
+            if self.proceso_actual.proceso_nuevo:
+                self.aplicar_tip()
+                self.proceso_actual.proceso_nuevo = False
+            else:
+                self.aplicar_tcp()
+            
+            # Reiniciar quantum
+            self.quantum_restante = self.quantum
+    
+    def ejecutar_proceso_actual(self):
+        """Ejecuta una unidad de tiempo del proceso actual."""
+        if self.proceso_actual is None:
+            return
+        
+        # Ejecutar proceso
+        self.proceso_actual.duracion_rafagas_cpu -= 1
+        self.cpu_proc += 1
+        self.cpu_proc_por_proceso[self.proceso_actual.nombre] += 1
+        
+        # Decrementar quantum
+        self.quantum_restante -= 1
+        
+        # Verificar si termina la ráfaga
+        if self.proceso_actual.duracion_rafagas_cpu == 0:
+            self.proceso_actual.cantidad_rafagas_cpu -= 1
+            
+            if self.proceso_actual.cantidad_rafagas_cpu == 0:
+                self.terminar_proceso()
+            else:
+                self.bloquear_proceso()
+    
+    def obtener_estadisticas_cpu(self):
+        """Implementación igual que FCFS."""
+        # ... misma lógica que FCFS ...
 ```
 
 ### Ejemplo: Algoritmo SPN (Shortest Process Next):

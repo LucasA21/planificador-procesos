@@ -404,13 +404,6 @@ class ExportadorPDF:
             
             if tipo_evento == 'llegada':
                 procesos[proceso_nombre]['llegada'] = tiempo
-                # No pintar llegada para el primer proceso (se pinta TIP en su lugar)
-                if proceso_nombre != primer_proceso:
-                    procesos[proceso_nombre]['segmentos'].append({
-                        'inicio': tiempo,
-                        'tipo': 'llegada',
-                        'fin': tiempo
-                    })
             elif tipo_evento == 'inicio ejecucion':
                 procesos[proceso_nombre]['segmentos'].append({
                     'inicio': tiempo,
@@ -540,8 +533,6 @@ class ExportadorPDF:
                     estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#E83E8C')))  # Magenta
                 elif celda_tipo == 'TFP':
                     estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#FFC107')))  # Amarillo
-                elif celda_tipo == 'llegada':
-                    estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#17A2B8')))  # Azul claro
                 elif celda_tipo == 'F':
                     estilos.append(('BACKGROUND', (j, i), (j, i), colors.HexColor('#28A745')))  # Verde (mismo que CPU)
         
@@ -550,10 +541,6 @@ class ExportadorPDF:
     
     def _determinar_contenido_celda_gantt(self, tiempo, datos_proceso):
         """Determina qué mostrar en cada celda del diagrama de Gantt."""
-        # Verificar si es tiempo de llegada (solo si no es tiempo 0)
-        if datos_proceso['llegada'] == tiempo and tiempo > 0:
-            return 'llegada'  # Solo para identificar el tipo, no se muestra texto
-        
         # Verificar segmentos activos en este tiempo
         for segmento in datos_proceso['segmentos']:
             # Si el segmento no tiene fin definido, solo verificar si el tiempo es >= inicio
@@ -570,8 +557,6 @@ class ExportadorPDF:
                         return 'TFP'
                     elif tipo == 'bloqueo' or tipo == 'inicio_io':
                         return 'I/O'
-                    elif tipo == 'llegada':
-                        return 'llegada'
             else:
                 # Si el segmento tiene fin definido, verificar si el tiempo está en el rango
                 if segmento['inicio'] <= tiempo <= segmento['fin']:
@@ -591,8 +576,6 @@ class ExportadorPDF:
                         return 'TFP'
                     elif tipo == 'bloqueo' or tipo == 'inicio_io':
                         return 'I/O'
-                    elif tipo == 'llegada':
-                        return 'llegada'
         
         return ''
     
