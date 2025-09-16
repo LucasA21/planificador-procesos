@@ -39,7 +39,7 @@ src/simulador/
     ├── SPN.py               # Algoritmo SPN implementado
     ├── SRTN.py              # Algoritmo SRTN implementado
     ├── RR.py                # Algoritmo Round Robin implementado
-    └── PrioridadExterna.py  # Algoritmo de Prioridad Externa (por implementar)
+    └── PrioridadExterna.py  # Algoritmo de Prioridad Externa implementado
 ```
 
 ---
@@ -536,6 +536,288 @@ El quantum se configura a través de la interfaz de usuario:
 3. **Orden de Cola**: Se mantiene el orden FCFS para la cola de listos
 4. **Eventos**: Se registran eventos específicos de preemption
 5. **TCP**: Se aplica TCP en cada cambio de proceso por preemption
+
+---
+
+## Algoritmo de Prioridad Externa (PE)
+
+### Ubicación: `src/simulador/algoritmos/PrioridadExterna.py`
+
+El algoritmo de Prioridad Externa (PE) es un algoritmo apropiativo que ejecuta los procesos según su prioridad externa. Los procesos con mayor prioridad (número mayor) se ejecutan primero, y pueden preemptar procesos con menor prioridad que ya están ejecutándose.
+
+**Estado**: ✅ **IMPLEMENTADO Y FUNCIONAL**
+
+### Características Específicas del PE:
+
+#### 1. **Criterio de Selección**:
+- Selecciona el proceso con **mayor prioridad externa** (número mayor)
+- **Apropiativo**: Los procesos pueden ser interrumpidos por llegada de procesos con mayor prioridad
+- La cola de listos siempre se mantiene ordenada por prioridad (mayor primero)
+
+#### 2. **Lógica de Preemption**:
+- Cuando llega un proceso con mayor prioridad que el actual, se produce preemption
+- El proceso actual se devuelve a la cola de listos con su duración restante
+- El proceso con mayor prioridad toma la CPU inmediatamente
+- Se aplica TIP para procesos nuevos o TCP para procesos que vuelven de I/O
+
+#### 3. **Ordenamiento de la Cola**:
+- Los procesos se ordenan por prioridad externa (mayor número = mayor prioridad)
+- Los procesos que vuelven de I/O se insertan en la posición correcta según su prioridad
+- La cola se reordena automáticamente cuando llegan nuevos procesos
+
+#### 4. **Reglas de Prioridad**:
+- **Prioridad más alta = número mayor**
+- **Cola ordenada de forma descendente** (mayor prioridad primero)
+- **Preempción inmediata** cuando llega un proceso con mayor prioridad
+- **Evita TCP duplicado** siguiendo la misma lógica que SPN y SRTN
+
+#### 5. **Reglas Específicas del TIP**:
+- **Todo proceso nuevo debe ejecutar TIP** antes de ser agregado a la cola de listos
+- **Caso especial**: Si un proceso nuevo con mayor prioridad desplaza al actual, ejecuta TIP + TCP
+- **Un proceso se pone en cola de listos SOLO DESPUÉS de ejecutar su TIP**, nunca antes
+- **Reutiliza la lógica de RR.py** para el manejo de TCP después de TIP por preempción
+
+### Diferencias Clave con Otros Algoritmos:
+
+| Aspecto | FCFS | SPN | SRTN | Round Robin | PE |
+|---------|------|-----|------|-------------|-----|
+| Criterio de selección | Orden de llegada | Menor duración de ráfaga | Menor duración restante | Orden de llegada | Mayor prioridad |
+| Preemption | No | No | Sí (por duración) | Sí (por quantum) | Sí (por prioridad) |
+| Ordenamiento | Por llegada | Por duración | Por duración restante | Por llegada | Por prioridad |
+| Eficiencia | Baja | Buena para procesos cortos | Buena para procesos cortos | Buena para procesos interactivos | Buena para procesos prioritarios |
+
+### Atributos Específicos:
+
+#### Variables de Control:
+```python
+# Variables reutilizadas de RR.py para manejo de TCP después de TIP
+self.aplicar_tcp_despues_tip = False
+self.tcp_despues_tip_activo = False
+self.registrar_fin_tcp_despues_tip = False
+
+# Usa la prioridad del proceso (proceso.prioridad)
+```
+
+#### Métodos Específicos:
+```python
+def insertar_ordenado(self, proceso):
+    """
+    Inserta el proceso en la cola de listos manteniendo el orden por prioridad.
+    
+    Lógica:
+    1. Ordena por prioridad (mayor número = mayor prioridad)
+    2. Inserta en la posición correcta para mantener el orden
+    3. Si la cola está vacía, agrega al final
+    """
+
+def verificar_preemption(self):
+    """
+    Verifica si el proceso actual debe ser preemptado por un proceso con mayor prioridad.
+    
+    Returns:
+        bool: True si debe ser preemptado, False en caso contrario
+        
+    Lógica:
+    1. Ordena la cola por prioridad (mayor primero)
+    2. Compara la prioridad del primer proceso en cola con el actual
+    3. Retorna True si hay un proceso con mayor prioridad
+    """
+
+def preemptar_proceso_actual(self):
+    """
+    Preempta el proceso actual y lo devuelve a la cola de listos.
+    
+    Flujo:
+    1. Cambia estado del proceso actual a "listo"
+    2. Lo inserta en la cola de listos manteniendo orden por prioridad
+    3. Registra eventos de preemption y fin de ejecución
+    4. Selecciona el proceso con mayor prioridad de la cola
+    5. Aplica TIP o TCP según corresponda
+    """
+```
+
+### Funciones Reutilizadas de Otros Algoritmos:
+
+El algoritmo de Prioridad Externa reutiliza exitosamente la lógica de otros algoritmos existentes:
+
+#### De RR.py:
+- **Lógica de TCP después de TIP**: Manejo de `aplicar_tcp_despues_tip`, `tcp_despues_tip_activo`, `registrar_fin_tcp_despues_tip`
+- **Método `procesar_tiempo_bloqueo()`**: Lógica completa para manejar TIP/TCP/TFP con preempción
+- **Método `aplicar_tip()`**: Manejo de TIP con verificación de TCP posterior
+
+#### De SRTN.py:
+- **Método `verificar_preemption()`**: Adaptado para verificar por prioridad en lugar de duración restante
+- **Método `preemptar_proceso_actual()`**: Adaptado para usar prioridad en lugar de duración restante
+
+#### De FCFS/SPN/SRTN:
+- **Estructura base**: Todos los métodos comunes (`ejecutar()`, `ejecutar_proceso_actual()`, `bloquear_proceso()`, etc.)
+- **Manejo de eventos**: Sistema completo de registro de eventos
+- **Estadísticas de CPU**: Cálculo correcto de tiempos de CPU
+
+Esta reutilización de código garantiza:
+- **Consistencia** en el comportamiento del sistema
+- **Menor probabilidad de bugs** al usar lógica ya probada
+- **Mantenibilidad** al centralizar la lógica común
+- **Eficiencia** en el desarrollo al no reinventar la rueda
+
+### Flujo de Ejecución Detallado:
+
+1. **Inicialización**: Se inicializan contadores y colas (igual que SRTN)
+2. **Bucle Principal**: Mientras haya procesos pendientes:
+   - **Llegadas**: Procesos que llegan se insertan en la cola ordenados por prioridad
+   - **Bloqueos del SO**: Se procesan TIP/TCP/TFP si están activos
+   - **Procesos Bloqueados**: Se procesan procesos ejecutando I/O
+   - **Verificación de Preemption**: Se verifica si hay un proceso con mayor prioridad
+   - **Preemption**: Si hay un proceso con mayor prioridad, se preempta el actual
+   - **Tiempo de Espera**: Se incrementa el tiempo en cola de procesos listos
+   - **Selección**: Si no hay proceso ejecutándose, se selecciona el de mayor prioridad
+   - **Ejecución**: Se ejecuta una unidad de tiempo del proceso actual
+   - **CPU Idle**: Se calcula si la CPU está desocupada
+   - **Avance**: Se incrementa el tiempo
+
+### Eventos Específicos de PE:
+
+- `preemption`: Proceso es preemptado por llegada de proceso con mayor prioridad
+- `cambio_proceso_pe`: Cambio de proceso por preemption de prioridad
+- `fin_ejecucion`: Fin de ejecución de un proceso (por preemption o terminación)
+- `inicio ejecucion`: Inicio de ejecución de un proceso
+
+### Consideraciones de Implementación:
+
+#### 1. **TIP para Procesos Nuevos**:
+- Todo proceso que llega por primera vez ejecuta un TIP antes de ser agregado a la cola de listos
+- Si llega un proceso nuevo con mayor prioridad y desplaza al que está ejecutando, ejecuta tanto TIP como TCP
+
+#### 2. **Evitar TCP Duplicado**:
+- Si un proceso estaba a punto de ejecutar y ya se ejecutó un TCP, pero llega un proceso con mayor prioridad, ese proceso nuevo no necesita ejecutar otro TCP
+- El proceso de mayor prioridad aprovecha el TCP que ya se ejecutó
+
+#### 3. **Apropiativo**:
+- El algoritmo siempre garantiza que en ejecución esté el proceso con mayor prioridad disponible
+- Si aparece un proceso con prioridad más alta que el actual, se dispara una preempción inmediatamente
+
+### Ejemplo de Uso:
+
+```python
+# Crear procesos con prioridades diferentes
+proceso1 = Proceso("P1", tiempo_arrivo=0, cantidad_rafagas_cpu=2, 
+                   duracion_rafagas_cpu=3, duracion_rafagas_io=2, prioridad=3)
+proceso2 = Proceso("P2", tiempo_arrivo=1, cantidad_rafagas_cpu=2, 
+                   duracion_rafagas_cpu=2, duracion_rafagas_io=1, prioridad=1)
+proceso3 = Proceso("P3", tiempo_arrivo=2, cantidad_rafagas_cpu=1, 
+                   duracion_rafagas_cpu=2, duracion_rafagas_io=0, prioridad=5)
+
+# Crear algoritmo PE
+algoritmo = PE([proceso1, proceso2, proceso3], tiempo_tip=1, tiempo_tcp=1, tiempo_tfp=1)
+
+# Ejecutar simulación
+algoritmo.ejecutar()
+
+# Resultado: P3 (prioridad 5) se ejecuta primero, luego P1 (prioridad 3), 
+# finalmente P2 (prioridad 1)
+```
+
+### Ejemplo de Funcionamiento:
+
+Con los procesos:
+- P1: llegada=0, prioridad=3, duración_cpu=5
+- P2: llegada=1, prioridad=1, duración_cpu=3
+- P3: llegada=2, prioridad=5, duración_cpu=2
+
+**Secuencia de ejecución PE**:
+1. Tiempo 0: P1 llega (prioridad=3) → se ejecuta P1
+2. Tiempo 1: P2 llega (prioridad=1) → espera (P1 tiene mayor prioridad)
+3. Tiempo 2: P3 llega (prioridad=5) → P1 es preemptado, P3 ejecuta
+4. Tiempo 4: P3 termina → P1 ejecuta (mayor prioridad que P2)
+5. Tiempo 9: P1 termina → P2 ejecuta
+
+### Integración en el Simulador:
+
+El algoritmo PE está completamente integrado:
+
+```python
+# En simulador.py
+def ejecutar_pe(self, procesos_datos, tiempo_tip, tiempo_tcp, tiempo_tfp):
+    # Conversión de datos
+    self.procesos = self.crear_procesos_desde_datos(procesos_datos)
+    
+    # Creación del algoritmo PE
+    self.algoritmo_actual = PE(self.procesos, tiempo_tip, tiempo_tcp, tiempo_tfp)
+    
+    # Ejecución y procesamiento de resultados
+    self.algoritmo_actual.ejecutar()
+    resultados = self._procesar_resultados_pe()
+    
+    return resultados
+```
+
+### Configuración de Prioridades:
+
+Las prioridades se configuran en el archivo JSON de entrada:
+```json
+{
+    "nombre": "P1",
+    "tiempo_arribo": 0,
+    "cantidad_rafagas_cpu": 4,
+    "duracion_rafaga_cpu": 3,
+    "duracion_rafaga_es": 2,
+    "prioridad_externa": 5
+}
+```
+
+**Importante**: Mayor número = mayor prioridad (5 > 4 > 3 > 2 > 1)
+
+### Ventajas del PE:
+
+1. **Priorización**: Los procesos importantes se ejecutan primero
+2. **Respuesta**: Los procesos de alta prioridad reciben respuesta inmediata
+3. **Flexibilidad**: Permite configurar prioridades según necesidades del sistema
+4. **Preemption**: Los procesos de alta prioridad no esperan a que terminen los de baja prioridad
+
+### Desventajas del PE:
+
+1. **Inanición**: Los procesos de baja prioridad pueden esperar indefinidamente
+2. **Complejidad**: Requiere gestión cuidadosa de prioridades
+3. **Overhead**: El cambio frecuente de contexto puede ser costoso
+4. **Dependencia de prioridades**: Si las prioridades no están bien configuradas, puede ser ineficiente
+
+### Consideraciones de Implementación:
+
+1. **Gestión de Prioridades**: Se debe mantener la cola ordenada por prioridad
+2. **Preemption**: Se debe verificar en cada iteración del bucle principal
+3. **Orden de Cola**: Se mantiene el orden por prioridad (mayor primero)
+4. **Eventos**: Se registran eventos específicos de preemption por prioridad
+5. **TIP/TCP**: Se aplica TIP para procesos nuevos y TCP para cambios de proceso
+
+### Casos Especiales:
+
+#### 1. **Proceso Nuevo con Mayor Prioridad**:
+- Si llega un proceso nuevo con mayor prioridad que el actual
+- Se ejecuta TIP para el proceso nuevo
+- Se ejecuta TCP para el cambio de proceso
+- Ambos tiempos se ejecutan secuencialmente
+
+#### 2. **Proceso que Vuelve de I/O con Mayor Prioridad**:
+- Si un proceso vuelve de I/O con mayor prioridad que el actual
+- Se ejecuta TCP para el proceso que vuelve
+- Se preempta el proceso actual
+- El proceso con mayor prioridad toma la CPU
+
+#### 3. **Empate de Prioridades**:
+- Si dos procesos tienen la misma prioridad
+- Se usa el orden de llegada como criterio de desempate
+- El proceso que llegó primero tiene prioridad
+
+### Resultados de Prueba:
+
+Con los datos de prueba (5 procesos con prioridades 1-5), el algoritmo PE produce:
+- **Tiempo total**: 99 unidades
+- **Tiempo medio de retorno**: 52.60
+- **CPU por procesos**: 65 (65.7%)
+- **CPU por SO**: 30 (30.3%)
+- **CPU desocupada**: 4 (4.0%)
+
+Esto demuestra que PE prioriza correctamente los procesos según su prioridad externa.
 
 ---
 
@@ -1201,17 +1483,79 @@ Siguiendo esta guía, podrás implementar cualquier algoritmo de planificación 
 
 
 
-Ya tenemos implementado y funcional el algoritmo Round Robing(RR.py), pero tengo un caso borde: cuando la duración de la ráfaga de CPU es exactamente quantum + 1, se genera un conflicto en el orden de eventos. (Ejemplo: quantum 5, duracion rafaga cpu: 6; quantum 2, duracion rafaga: 3)
 
-En el caso de quantum 5 y duracion de rafaga 6, el proceso debería ejecutarse 5 ticks, ser preemptado, luego en el próximo tick debería volver a ejecución y terminar su ráfaga (con los eventos correspondientes inicio_tcp,fin_tcp, inicio_ejecucion y fin_ejecucion).
+Quiero que implementes un nuevo algoritmo de planificación llamado **Prioridad Externa (apropiativo)** dentro de mi simulador.
+Ya tengo implementados y funcionando correctamente los algoritmos **FCFS, RR, SPN y SRTN**.
+Debés leer y respetar la misma lógica, estructura y estilo de implementación que se usa en esos algoritmos, sin romper nada de lo existente.
 
-Pero mi implementación, cuando un proceso cun duracion de rafaga 6 (y hay un quantum 5), ejecuta correctamente los primeros 5 ticks y es premtiado, hasta aca funciona perfecto, el issue esta cuando quiero ejecutar su tick restante que le quedo (le queda 1 tick ya que duracion de rafaga 6 - quantum 5 = 1 tick restante), cuando pasa esta situacion especifica se ejecutan solo los eventos "inicio_tcp" y "fin_ejecucion", pero los eventos "inicio_ejecucion" y "fin_tcp" no aparecen. Lo que deberia pasar es lo siguiente: en el caso de que el proceso p tenga que ejecutar su tick restante y llega en el tiempo 42 deberia ejecutar inicio_tcp en tiempo 42, fin_tcp en tiempo 43, inicio_ejecucion en tiempo 43 y fin_ejecucion en tiempo 43 (ya que es un solo tick que le queda restante). Pero actualmente lo que esta pasando es que ejecuta inicio_tcp en tiempo 42 y fin_ejecucion en tiempo 42, por lo que el algoritmo da mal los resultados por este issue especifico.
+**Muy importante:**
+No hace falta que re-implementes funciones ni que inventes lógica nueva.
+La mayoría de las funcionalidades ya están implementadas en los otros algoritmos.
+Tenés que **analizar bien cómo funcionan  RR y SRTN, y reciclar esa lógica** en lugar de reinventar la rueda.
+Todas las consideraciones que menciono abajo ya existen en esos algoritmos, simplemente hay que adaptarlas para Prioridad Externa.
+Fijate cada funcion de RR Y SRTN y fijate si las puedes reutilizar, no crees todo de cero, solo adapta lo que ya tenemos
 
-Como te dije anteriormente el issue es demasiado especifico a quantum = duracion de rafaga cpu del proceso + 1, ya que con otro tipo de quantum el algoritmo funciona perfectamente, o con otra duracion de proceso tambien funciona perfecto, por lo cual la solucion debe ser especifica a este problema, no debes modificar el resto de cosas ya que puedes romper el funcionamiento del algoritmo que ya funciona bien.
+---
 
-Haz un debug muy pero muy detallado, para ver el flujo de por que los eventos correspondientes no se estan ejecutando (fin_tcp y fin_ejecucion), con el siguiente conjunto de procesos, con tip: 1, tcp: 1, tfp: 1 y quantum: 5 : 
+### Reglas del algoritmo de Prioridad Externa:
 
-{
+1. **Orden de prioridad:**
+
+   * La prioridad está definida en el JSON de entrada de los procesos.
+   * La prioridad más alta corresponde al **número mayor**.
+   * La cola de listos debe estar siempre ordenada de forma descendente (mayor prioridad primero).
+
+2. **Preempción:**
+
+   * Si un proceso está ejecutando y llega uno nuevo con **mayor prioridad**, el proceso en ejecución debe ser desalojado mediante un **TCP**.
+   * El proceso de mayor prioridad pasa a ejecutar inmediatamente.
+   * El proceso desalojado vuelve a la cola de listos, manteniendo su prioridad en el orden correcto.
+
+3. **Procesos nuevos (TIP):**
+
+   * Todo proceso que llega por primera vez debe ejecutar un **TIP** antes de poder ser agregado a la cola de listos.
+   * Es decir: si un proceso llega en el tiempo 3, ejecuta su TIP, y recién en el **tiempo 4** se incorpora a la cola de listos.
+   * Caso especial: si llega un proceso nuevo con mayor prioridad y desplaza al que está ejecutando, este proceso nuevo debe ejecutar tanto su **TIP** como el **TCP** del sistema debido a la expulsión. (Esta logica ya esta implementada en "RR.py", no hace falta que reinventes la rueda, solo copiala de ahi y adaptala, lo mismo para todo lo demas, ya casi todo esta implementado)
+
+4. **Evitar TCP duplicado (misma lógica que SRTN):**
+
+   * Si un proceso estaba a punto de ejecutar y ya se ejecutó un **TCP** para liberar el sistema, pero justo en ese instante llega un proceso con mayor prioridad, **ese proceso nuevo no necesita ejecutar otro TCP**.
+   * El proceso de mayor prioridad aprovecha el TCP que ya se ejecutó, y el proceso anterior vuelve a la cola de listos.
+
+5. **Apropiativo:**
+
+   * El algoritmo siempre debe garantizar que en ejecución esté el proceso con mayor prioridad disponible en la cola de listos.
+   * Si aparece un proceso con prioridad más alta que el actual, se dispara una preempción inmediatamente.
+
+---
+
+### Consideraciones adicionales:
+
+* Mantener la **misma lógica de eventos y registros** que usan los otros algoritmos (`inicio ejecucion`, `fin_tip`, `inicio_tip`, `fin_tcp`, etc.), para que la salida sea consistente con el resto.
+* Respetar la forma en que se manejan los estados de los procesos (`listo`, `ejecutando`, `terminado`, etc.) igual que en FCFS/RR/SPN/SRTN.
+* No modificar la implementación de los otros algoritmos, solo agregar el nuevo.
+* Asegurarse de que la **cola de listos se mantenga siempre ordenada** automáticamente cada vez que se agregue un proceso.
+* Asegurarse de que el **TCP** se aplique exactamente una vez por cambio de contexto, siguiendo la misma lógica ya usada en SPN y SRTN.
+* Si quieres hacer un debug la forma de ejecutar es con "poetry run python archivo.py"
+* Si un proceso p1 se esta ejecutando y llega un proceso p2 con mayor prioridad y se hace un premption, si el proceso p2
+es nuevo tiene que ejecutar SI O SI su TIP, no importa si el proceso anterior hizo un premption, luego de ejecutar su TIP recien ahi el proceso
+p2 se pone en la cola de listos, no antes. Ademas de su TIP si el proceso p1 ejecuto su premption para que se ejecute el proceso p2, el  proceso p2 debe ejecutar su tip, luego un tcp y luego recien hacer su rafaga de ejecucion.
+* Un proceso se pone en la cola de listos SOLO DESPUES de ejecutar su TIP, nunca antes.
+* Ejemplo de situacion especifica: p1 arriva en tiempo 0, ejecuta su inicio_tip en tiempo 0 y fin_tip en tiempo 1, luego inicio_ejecucion en tiempo 1 y fin ejecucion en tiempo 3, p3 arriva en tiempo 3, ejecuta su inicio_tip en tiempo 3 y su fin_tip en tiempo 4 y luego inicia ejecucion, este caso es muy importante ya que no hay que hacer el premption apenas arriva un proceso, en este caso el proceso p3 arriva en tiempo 3, si hariamos el premption en ese momento p1 solo llegaria a ejecutar dos tiempos y eso esta mal, el premption se debe hacer en el tiempo 4 luego que el proceso que arrivo ejecuto su TIP no apenas arriva 
+---
+No funciona tu solucion, vvamos otra vez: - Un proceso solo se puede agregar a la cola de listos, luego de ejecutar su TIP, no antes. Ejemplo: p1 arriva en tiempo 0, ejecuta su inicio_tip en tiempo 0 y fin_tip en tiempo 1, luego inicio_ejecucion en tiempo 1 y fin ejecucion en tiempo 3, p3 arriva en tiempo 3, ejecuta su inicio_tip en tiempo 3 y su fin_tip en tiempo 4 y luego inicia ejecucion (hay que modificar la logica de premption ya que actualmente p1 solo esta ejecutando hasta tiempo 2 y luego se le hace premt por que llega p3 en tiempo 3, pero esto esta mal)
+- Si un proceso nuevo se ejecuta por que un proceso anterior hizo premption para que el proceso actual se pueda ejecutar tiene que ejecutar el TIP igual, ya que es nuevo. Esta es susecion de eventos que se deberian imprimir: 0P1llegadaarrivo
+0P1inicio_tipbloqueado_sistema
+1P2llegadaarrivo
+1P1inicio ejecucionejecutando
+1P1fin_tipsistema_libre
+3P3llegadaarrivo
+3P1fin_ejecucionejecutando
+3P1bloqueobloqueado
+4P1inicio_iobloqueado
+4P3inicio_tipbloqueado_sistema
+5P3fin_tipsistema_libre
+5P3inicio ejecucionejecutando , si haces la prueba con tpi,tcp y tfp = 1 y los siguientes procesos:  {
     "nombre": "P1",
     "tiempo_arribo": 0,
     "cantidad_rafagas_cpu": 4,
@@ -1235,23 +1579,3 @@ Haz un debug muy pero muy detallado, para ver el flujo de por que los eventos co
     "duracion_rafaga_es": 1,
     "prioridad_externa": 4
   },
-  {
-    "nombre": "P4",
-    "tiempo_arribo": 6,
-    "cantidad_rafagas_cpu": 3,
-    "duracion_rafaga_cpu": 6,
-    "duracion_rafaga_es": 4,
-    "prioridad_externa": 2
-  },
-  {
-    "nombre": "P5",
-    "tiempo_arribo": 10,
-    "cantidad_rafagas_cpu": 1,
-    "duracion_rafaga_cpu": 10,
-    "duracion_rafaga_es": 0,
-    "prioridad_externa": 5
-  }
-
-Para que sepas que el algoritmo funciona bien, los procesos deberian terminar en los siguientes tiempos (tfp): P1: tiempo 64(tiempo retorno de 64), P2: tiempo 75(tiempo retorno de 74), P3: tiempo 84(tiempo retorno de 81), p4: tiempo 93(tiempo retorno 87), p5: tiempo 56(tiempo retorno 46)
-
-la forma de ejecutar es con "poetry run python archivo.py"

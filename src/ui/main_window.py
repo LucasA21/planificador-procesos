@@ -379,6 +379,13 @@ class VentanaPrincipal(ctk.CTk):
                 parametros['tfp'],
                 parametros['quantum']
             )
+        elif politica == "Prioridad Externa":
+            resultados = simulador.ejecutar_pe(
+                self.procesos_cargados,
+                parametros['tip'],
+                parametros['tcp'],
+                parametros['tfp']
+            )
         else:
             # Para otros algoritmos, mostrar mensaje de no implementado
             self.pestaña_resultados.mostrar_mensaje_inicial()
