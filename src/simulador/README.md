@@ -1199,7 +1199,19 @@ Siguiendo esta guía, podrás implementar cualquier algoritmo de planificación 
 
 
 
-Bueno te explico lo que tenes que hacer a continuacion, ya tenenmos implementandos a la perfeccion el algoritmo fcfs y spn, ahora debemos implementar SRTN, este algoritmo debe funcionar identico al SPN(mismo codigo), solo que hay que agregarle algunas funcionalidades: si se esta ejecutando un proceso y llega un proceso a la cola de listos con menor rafagas de cpu que el proceso actual, el proceso actual debe volver a la cola de listos, con su duracion de rafaga restante( es decir si ya ejecuto 3 tiempos de rafaga y el total era 6, debe volver a la lista con 3 tiempos de rafaga no con 6) cada vez que se haga un cambio de proceso por este motivo se debe ejecutar un tcp, en el caso de que sea un proceso nuevo se debe ejecutar tanto el tip correspondiente y luego el tcp y luego recien puede ejecutar. Ten en cuenta los archivos "SRTN2" y "SRTN3" , son dos algoritmos srtn implementados por unos amigos, esos algoritmos estan funcionales asi que te podes guiar un poco de ahi. Una vez que termines haz un debug detallado con estos procesos: {
+
+
+Ya tenemos implementado y funcional el algoritmo Round Robing(RR.py), pero tengo un caso borde: cuando la duración de la ráfaga de CPU es exactamente quantum + 1, se genera un conflicto en el orden de eventos. (Ejemplo: quantum 5, duracion rafaga cpu: 6; quantum 2, duracion rafaga: 3)
+
+En el caso de quantum 5 y duracion de rafaga 6, el proceso debería ejecutarse 5 ticks, ser preemptado, luego en el próximo tick debería volver a ejecución y terminar su ráfaga (con los eventos correspondientes inicio_tcp,fin_tcp, inicio_ejecucion y fin_ejecucion).
+
+Pero mi implementación, cuando un proceso cun duracion de rafaga 6 (y hay un quantum 5), ejecuta correctamente los primeros 5 ticks y es premtiado, hasta aca funciona perfecto, el issue esta cuando quiero ejecutar su tick restante que le quedo (le queda 1 tick ya que duracion de rafaga 6 - quantum 5 = 1 tick restante), cuando pasa esta situacion especifica se ejecutan solo los eventos "inicio_tcp" y "fin_ejecucion", pero los eventos "inicio_ejecucion" y "fin_tcp" no aparecen. Lo que deberia pasar es lo siguiente: en el caso de que el proceso p tenga que ejecutar su tick restante y llega en el tiempo 42 deberia ejecutar inicio_tcp en tiempo 42, fin_tcp en tiempo 43, inicio_ejecucion en tiempo 43 y fin_ejecucion en tiempo 43 (ya que es un solo tick que le queda restante). Pero actualmente lo que esta pasando es que ejecuta inicio_tcp en tiempo 42 y fin_ejecucion en tiempo 42, por lo que el algoritmo da mal los resultados por este issue especifico.
+
+Como te dije anteriormente el issue es demasiado especifico a quantum = duracion de rafaga cpu del proceso + 1, ya que con otro tipo de quantum el algoritmo funciona perfectamente, o con otra duracion de proceso tambien funciona perfecto, por lo cual la solucion debe ser especifica a este problema, no debes modificar el resto de cosas ya que puedes romper el funcionamiento del algoritmo que ya funciona bien.
+
+Haz un debug muy pero muy detallado, para ver el flujo de por que los eventos correspondientes no se estan ejecutando (fin_tcp y fin_ejecucion), con el siguiente conjunto de procesos, con tip: 1, tcp: 1, tfp: 1 y quantum: 5 : 
+
+{
     "nombre": "P1",
     "tiempo_arribo": 0,
     "cantidad_rafagas_cpu": 4,
@@ -1238,4 +1250,8 @@ Bueno te explico lo que tenes que hacer a continuacion, ya tenenmos implementand
     "duracion_rafaga_cpu": 10,
     "duracion_rafaga_es": 0,
     "prioridad_externa": 5
-  }, la forma de ejecutar es con "poetry run python archivo.py", para que el algoritmo este correcto debe devolver estos datos(imagen)
+  }
+
+Para que sepas que el algoritmo funciona bien, los procesos deberian terminar en los siguientes tiempos (tfp): P1: tiempo 64(tiempo retorno de 64), P2: tiempo 75(tiempo retorno de 74), P3: tiempo 84(tiempo retorno de 81), p4: tiempo 93(tiempo retorno 87), p5: tiempo 56(tiempo retorno 46)
+
+la forma de ejecutar es con "poetry run python archivo.py"

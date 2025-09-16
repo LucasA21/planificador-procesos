@@ -178,7 +178,7 @@ class RR:
                 self.seleccionar_siguiente_proceso()
 
             # Si hay proceso ejecutandose, ejecutarlo
-            if self.proceso_actual is not None:
+            if self.proceso_actual is not None and self.tiempo_restante_bloqueo == 0:
                 self.ejecutar_proceso_actual()
                 
                 # Verificar preemption por quantum DESPUÉS de ejecutar
@@ -233,14 +233,13 @@ class RR:
         if self.proceso_actual is None:
             return
 
-        # Se consume una unidad de tiempo de CPU ejecutando proceso
+        # Consumir SIEMPRE un tick de CPU
         self.proceso_actual.duracion_rafagas_cpu -= 1
         self.cpu_proc += 1  # Acumular tiempo real de CPU ejecutando procesos
         self.cpu_proc_por_proceso[self.proceso_actual.nombre] += 1  # Acumular por proceso
-        
-        # Decrementar el quantum restante
         self.quantum_restante -= 1
 
+        # Caso 1: la ráfaga terminó justo ahora
         if self.proceso_actual.duracion_rafagas_cpu == 0:
             self.proceso_actual.cantidad_rafagas_cpu -= 1
 
@@ -248,6 +247,14 @@ class RR:
                 self.terminar_proceso()
             else:
                 self.bloquear_proceso()
+            return
+
+        # Caso 2: se agotó el quantum pero todavía queda ráfaga
+        if self.quantum_restante == 0:
+            # Preempción: devolver a la cola de listos
+            self.preemptar_proceso_actual()
+
+
 
     def seleccionar_siguiente_proceso(self):
         if len(self.cola_listos) > 0:
@@ -338,6 +345,26 @@ class RR:
             'evento': 'fin_ejecucion',
             'estado': 'ejecutando'
         })
+
+        # Si el proceso estaba ejecutándose después de un TCP, registrar fin_tcp
+        # Buscar el último inicio_tcp del proceso que no tenga fin_tcp correspondiente
+        eventos_inicio_tcp = [e for e in self.resultados 
+                             if e['proceso'] == self.proceso_actual.nombre and 
+                                e['evento'] == 'inicio_tcp' and 
+                                e['tiempo'] < self.tiempo_actual]
+        
+        eventos_fin_tcp = [e for e in self.resultados 
+                          if e['proceso'] == self.proceso_actual.nombre and 
+                             e['evento'] == 'fin_tcp' and 
+                             e['tiempo'] < self.tiempo_actual]
+        
+        if len(eventos_inicio_tcp) > len(eventos_fin_tcp):
+            self.resultados.append({
+                'tiempo': self.tiempo_actual,
+                'proceso': self.proceso_actual.nombre,
+                'evento': 'fin_tcp',
+                'estado': 'sistema_libre'
+            })
 
         if self.tiempo_tfp > 0:
             self.aplicar_tfp()
@@ -484,22 +511,28 @@ class RR:
             self.cpu_so += 1
 
             if self.tiempo_restante_bloqueo == 0:
+                # GUARDAR el tipo de bloqueo original: importantísimo
+                tipo_original = self.tipo_bloqueo
+
                 # Determinar el nombre del proceso para el evento de fin
                 nombre_proceso = None
-                if self.tipo_bloqueo == 'tfp':
+
+                if tipo_original == 'tfp':
                     # Para TFP, buscar el proceso que está terminando
                     for proceso in self.procesos_terminados:
                         if proceso.estado == "terminando":
                             nombre_proceso = proceso.nombre
                             break
+                    # Finaliza el proceso completamente (esto puede sobrescribir self.tipo_bloqueo)
                     self.finalizar_proceso_completamente()
-                elif self.tipo_bloqueo in ['tip', 'tcp'] and self.proceso_actual is not None:
+
+                elif tipo_original in ['tip', 'tcp'] and self.proceso_actual is not None:
                     # Para TIP y TCP, usar el proceso actual
                     nombre_proceso = self.proceso_actual.nombre
-                    
+
                     # Verificar si después del TIP se debe aplicar TCP
-                    if self.tipo_bloqueo == 'tip' and self.aplicar_tcp_despues_tip:
-                        # Registrar fin del TIP primero
+                    if tipo_original == 'tip' and self.aplicar_tcp_despues_tip:
+                        # Registrar fin del TIP primero (usa tipo_original seguro)
                         self.resultados.append({
                             'tiempo': self.tiempo_actual,
                             'proceso': self.proceso_actual.nombre,
@@ -511,7 +544,6 @@ class RR:
                         self.tcp_despues_tip_activo = True
                         self.aplicar_tcp()
                         # No cambiar estado a ejecutando aún, esperar a que termine el TCP
-                        # No registrar fin_tip nuevamente, pero sí registrar fin_tcp cuando termine
                         nombre_proceso = None
                     else:
                         # Después del TIP o TCP, el proceso pasa a ejecutándose
@@ -522,23 +554,36 @@ class RR:
                             'evento': 'inicio ejecucion',
                             'estado': 'ejecutando'
                         })
+                        # Ejecutar inmediatamente después de que termine el TIP/TCP
+                        # NOTA: ejecutar_proceso_actual() puede terminar el proceso e invocar aplicar_tfp(),
+                        # lo cual puede cambiar self.tipo_bloqueo. Por eso usamos tipo_original para registrar el fin.
+                        self.ejecutar_proceso_actual()
 
-                # Registrar evento de fin con el nombre del proceso correcto
+                # Registrar evento de fin con el tipo ORIGINAL del bloqueo
                 if nombre_proceso:
                     self.resultados.append({
                         'tiempo': self.tiempo_actual,
                         'proceso': nombre_proceso,
-                        'evento': f'fin_{self.tipo_bloqueo}',
+                        'evento': f'fin_{tipo_original}',
                         'estado': 'sistema_libre'
                     })
-                elif self.tcp_despues_tip_activo and self.tipo_bloqueo == 'tcp':
+                elif self.tcp_despues_tip_activo and tipo_original == 'tcp':
                     # Si es TCP después de TIP, marcar que se debe registrar fin_tcp en el siguiente ciclo
                     self.tcp_despues_tip_activo = False
                     self.registrar_fin_tcp_despues_tip = True
-                self.tipo_bloqueo = None
-            
-            return True # Aun esta bloqueado
-        return False # Ya terminó el bloqueo
+
+                # IMPORTANTE: Solo limpiar el tipo de bloqueo si NO fue cambiado por una nueva operación.
+                # Si durante la ejecución se aplicó un nuevo bloqueo (p.ej. aplicar_tfp()) entonces
+                # self.tipo_bloqueo ya apunta al nuevo bloqueo y self.tiempo_restante_bloqueo fue inicializado.
+                # Aquí simplemente ponemos None **solo** si el tipo era el que acabamos de terminar y
+                # no se reaplicó otro inmediatamente.
+                # Para simplificar y evitar perder el nuevo bloqueo, hacemos:
+                if self.tipo_bloqueo == tipo_original:
+                    self.tipo_bloqueo = None
+
+            return True  # Aun esta bloqueado
+        return False  # Ya terminó el bloqueo
+
     
     def finalizar_proceso_completamente(self):
         """Finaliza completamente un proceso después del TFP."""
