@@ -140,7 +140,7 @@ class PE:
         
         # Registrar evento de fin de ejecución
         self.resultados.append({
-            'tiempo': self.tiempo_actual,
+            'tiempo': self.tiempo_actual - 1,
             'proceso': self.proceso_actual.nombre,
             'evento': 'fin_ejecucion',
             'estado': 'ejecutando'
@@ -161,11 +161,6 @@ class PE:
         # El proceso de mayor prioridad toma la CPU
         self.proceso_actual = self.cola_listos.pop(indice_mayor_prioridad)
         
-        # Si este proceso acaba de terminar I/O, removerlo de la lista de recién terminados
-        # porque ya está siendo usado para preemptar
-        if self.proceso_actual.nombre in self.procesos_recien_terminaron_io:
-            self.procesos_recien_terminaron_io.remove(self.proceso_actual.nombre)
-        
         # Determinar qué tiempos del sistema aplicar para el proceso que preempta
         if self.proceso_actual.proceso_nuevo:
             # Proceso nuevo: aplicar TIP + TCP
@@ -176,6 +171,11 @@ class PE:
         else:
             # Proceso que vuelve: solo TCP
             self.aplicar_tcp()
+        
+        # Si este proceso acaba de terminar I/O, removerlo de la lista de recién terminados
+        # porque ya está siendo usado para preemptar
+        if self.proceso_actual.nombre in self.procesos_recien_terminaron_io:
+            self.procesos_recien_terminaron_io.remove(self.proceso_actual.nombre)
 
     def ejecutar(self):
         # Límite de seguridad para evitar bucles infinitos
