@@ -189,7 +189,7 @@ class Simulador:
         self.procesos = self.crear_procesos_desde_datos(procesos_datos)
         
         # Crear instancia del algoritmo Prioridad Externa
-        self.algoritmo_actual = PrioridadExterna(self.procesos, tiempo_tip, tiempo_tcp, tiempo_tfp)
+        self.algoritmo_actual = PE(self.procesos, tiempo_tip, tiempo_tcp, tiempo_tfp)
         
         # Ejecutar la simulación
         self.algoritmo_actual.ejecutar()
