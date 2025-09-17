@@ -104,6 +104,7 @@ class PE:
         """
         Verifica si el proceso actual debe ser preemptado por un proceso
         con mayor prioridad externa.
+        En PE, los procesos que terminan I/O SÍ pueden preemptar inmediatamente.
         """
         if self.proceso_actual is None or len(self.cola_listos) == 0:
             return False
@@ -111,8 +112,12 @@ class PE:
         # Ordenar la cola por prioridad externa (mayor primero)
         self.cola_listos.sort(key=lambda p: p.get_prioridad(), reverse=True)
         
+        # Para preemption, SÍ considerar procesos que acaban de terminar I/O
+        # porque deben poder preemptar inmediatamente si tienen mayor prioridad
+        proceso_mas_prioritario = self.cola_listos[0]
+        
         # Si hay un proceso con mayor prioridad que el actual
-        if self.cola_listos[0].get_prioridad() > self.proceso_actual.get_prioridad():
+        if proceso_mas_prioritario.get_prioridad() > self.proceso_actual.get_prioridad():
             return True
             
         return False
@@ -127,7 +132,11 @@ class PE:
             
         # Ordenar la cola para obtener el proceso de mayor prioridad
         self.cola_listos.sort(key=lambda p: p.get_prioridad(), reverse=True)
+        
+        # Para preemption, tomar el proceso más prioritario directamente
+        # (incluso si acaba de terminar I/O, porque debe poder preemptar)
         proceso_mayor_prioridad = self.cola_listos[0]
+        indice_mayor_prioridad = 0
         
         # Registrar evento de fin de ejecución
         self.resultados.append({
@@ -150,7 +159,12 @@ class PE:
         })
         
         # El proceso de mayor prioridad toma la CPU
-        self.proceso_actual = self.cola_listos.pop(0)
+        self.proceso_actual = self.cola_listos.pop(indice_mayor_prioridad)
+        
+        # Si este proceso acaba de terminar I/O, removerlo de la lista de recién terminados
+        # porque ya está siendo usado para preemptar
+        if self.proceso_actual.nombre in self.procesos_recien_terminaron_io:
+            self.procesos_recien_terminaron_io.remove(self.proceso_actual.nombre)
         
         # Determinar qué tiempos del sistema aplicar para el proceso que preempta
         if self.proceso_actual.proceso_nuevo:
@@ -198,20 +212,10 @@ class PE:
                 self.tiempo_actual += 1
                 continue
 
-            # Procesar procesos bloqueados
+            # PRIMERO: Procesar procesos bloqueados para que puedan preemptar inmediatamente
             self.procesar_procesos_bloqueados()
 
-            # Incrementar tiempo de espera para procesos en cola de listos
-            for proceso in self.cola_listos:
-                proceso.tiempo_en_listo += 1
-                # Acumular tiempo en estado listo (solo después de pagar TIP)
-                if proceso.nombre in self.t_listo_por_proceso:
-                    self.t_listo_por_proceso[proceso.nombre] += 1
-
-            # Si no hay proceso ejecutandose, selecciona uno
-            if self.proceso_actual is None:
-                self.seleccionar_siguiente_proceso()
-
+            # SEGUNDO: Verificar preemption DESPUÉS de procesar procesos bloqueados
             if self.proceso_actual is not None and self.tiempo_restante_bloqueo == 0:
                 # ¿Hay alguien más prioritario en cola_listos?
                 if self.verificar_preemption():
@@ -223,7 +227,18 @@ class PE:
                         pass
                     else:
                         # preemptar ahora, no ejecuta este tick
-                        self.preemptar_proceso_actual()            
+                        self.preemptar_proceso_actual()
+
+            # Incrementar tiempo de espera para procesos en cola de listos
+            for proceso in self.cola_listos:
+                proceso.tiempo_en_listo += 1
+                # Acumular tiempo en estado listo (solo después de pagar TIP)
+                if proceso.nombre in self.t_listo_por_proceso:
+                    self.t_listo_por_proceso[proceso.nombre] += 1
+
+            # Si no hay proceso ejecutandose, selecciona uno
+            if self.proceso_actual is None:
+                self.seleccionar_siguiente_proceso()
 
             # Ahora, si aún hay proceso en CPU y no hay bloqueo, ejecuta UNA sola unidad
             if self.proceso_actual is not None and self.tiempo_restante_bloqueo == 0:
