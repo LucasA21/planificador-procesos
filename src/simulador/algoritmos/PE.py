@@ -212,15 +212,26 @@ class PE:
             if self.proceso_actual is None:
                 self.seleccionar_siguiente_proceso()
 
-            # Si hay proceso ejecutandose, ejecutarlo
+            if self.proceso_actual is not None and self.tiempo_restante_bloqueo == 0:
+                # ¿Hay alguien más prioritario en cola_listos?
+                if self.verificar_preemption():
+                    # tie-break: si el proceso actual va a TERMINAR su ráfaga en ESTE tick,
+                    # permitile ejecutar (porque debe poder iniciar su I/O inmediatamente).
+                    # Observá que miramos la duracion _antes_ de ejecutar.
+                    if getattr(self.proceso_actual, 'duracion_rafagas_cpu', None) == 1:
+                        # dejar que ejecute su último unit, no preempuar
+                        pass
+                    else:
+                        # preemptar ahora, no ejecuta este tick
+                        self.preemptar_proceso_actual()            
+
+            # Ahora, si aún hay proceso en CPU y no hay bloqueo, ejecuta UNA sola unidad
             if self.proceso_actual is not None and self.tiempo_restante_bloqueo == 0:
                 self.ejecutar_proceso_actual()
 
-            # Verificar preemption DESPUÉS de ejecutar el proceso actual
-            # Esto permite que el proceso complete su ciclo (incluyendo I/O) antes de ser preemptado
-            if self.proceso_actual is not None and self.tiempo_restante_bloqueo == 0:
-                if self.verificar_preemption():
-                    self.preemptar_proceso_actual()
+
+
+
 
             # Calcular CPU_idle: si no hay proceso ejecutándose ni labores del SO
             if (self.proceso_actual is None and 
