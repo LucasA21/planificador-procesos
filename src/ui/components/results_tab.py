@@ -425,88 +425,135 @@ class PestañaResultados(ctk.CTkFrame):
                 return
         
         try:
-            # Convertir la ruta a URL file:// para el navegador
-            ruta_url = Path(ruta_absoluta).as_uri()
-            
-            # Intentar usar el navegador predeterminado del sistema de forma inteligente
-            navegador_predeterminado = None
-            
-            try:
-                # En Linux, intentar obtener el navegador predeterminado usando xdg-settings
-                resultado = subprocess.run(["xdg-settings", "get", "default-web-browser"], 
-                                         capture_output=True, text=True, timeout=3)
-                if resultado.returncode == 0:
-                    app_desktop = resultado.stdout.strip()
-                    
-                    # Mapear archivos .desktop a comandos ejecutables
-                    mapeo_navegadores = {
-                        'firefox.desktop': 'firefox',
-                        'google-chrome.desktop': 'google-chrome',
-                        'chromium-browser.desktop': 'chromium-browser',
-                        'chromium.desktop': 'chromium',
-                        'opera.desktop': 'opera',
-                        'brave-browser.desktop': 'brave-browser'
-                    }
-                    
-                    navegador_predeterminado = mapeo_navegadores.get(app_desktop)
-            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-                pass
-            
-            # Si detectamos el navegador predeterminado, intentar usarlo directamente
-            if navegador_predeterminado:
-                try:
-                    subprocess.run([navegador_predeterminado, ruta_url], check=True, timeout=5,
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    return
-                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-                    pass
-            
-            # Si no pudimos detectar o usar el navegador predeterminado, usar webbrowser.open()
-            # pero configurando BROWSER para evitar evince
-            original_browser = os.environ.get('BROWSER')
-            
-            # Solo configurar BROWSER si no está ya configurado
-            if not original_browser:
-                # Buscar un navegador disponible para configurar como fallback
-                navegadores_fallback = ["firefox", "google-chrome", "chromium-browser", "chromium"]
-                for navegador in navegadores_fallback:
-                    try:
-                        subprocess.run(["which", navegador], check=True, 
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                        os.environ['BROWSER'] = navegador
-                        break
-                    except subprocess.CalledProcessError:
-                        continue
-            
-            try:
-                webbrowser.open(ruta_url)
-                return
-            finally:
-                # Restaurar variable de entorno original solo si la configuramos nosotros
-                if not original_browser and 'BROWSER' in os.environ:
-                    del os.environ['BROWSER']
-            
-            # Si webbrowser falla, intentar métodos específicos del sistema operativo
+            # Detectar el sistema operativo
             sistema = platform.system()
             
+            # Convertir la ruta a URL file:// para navegadores (universal)
+            ruta_url = Path(ruta_absoluta).as_uri()
+            
+            # Para todos los sistemas, intentar abrir en el navegador predeterminado
             if sistema == "Windows":
-                os.startfile(ruta_absoluta)
-            elif sistema == "Darwin":  # macOS
-                subprocess.run(["open", ruta_absoluta], check=True)
-            else:  # Linux
-                # Solo navegadores web como último recurso
-                comandos_alternativos = ["opera", "brave-browser", "midori"]
+                # En Windows, intentar varias formas de abrir en el navegador
+                try:
+                    # Método 1: Usar webbrowser.open() directamente
+                    webbrowser.open(ruta_url)
+                    return
+                except Exception as e:
+                    print(f"Error con webbrowser en Windows: {e}")
                 
-                for comando in comandos_alternativos:
+                # Método 2: Intentar obtener y usar el navegador predeterminado explícitamente
+                try:
+                    import winreg
+                    # Obtener el navegador predeterminado desde el registro de Windows
+                    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\http\UserChoice") as key:
+                        prog_id = winreg.QueryValueEx(key, "Progid")[0]
+                    
+                    with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, f"{prog_id}\\shell\\open\\command") as key:
+                        comando = winreg.QueryValueEx(key, "")[0]
+                    
+                    # Extraer el ejecutable del comando
+                    if comando.startswith('"'):
+                        navegador_exe = comando.split('"')[1]
+                    else:
+                        navegador_exe = comando.split()[0]
+                    
+                    # Ejecutar el navegador con la URL
+                    subprocess.run([navegador_exe, ruta_url], check=True, timeout=5)
+                    return
+                    
+                except Exception as e:
+                    print(f"Error obteniendo navegador predeterminado: {e}")
+                    # Continuar con métodos alternativos
+            
+            # Para sistemas Unix-like (Linux/macOS), usar métodos específicos
+            if sistema != "Windows":
+                # En macOS, usar 'open'
+                if sistema == "Darwin":
                     try:
-                        subprocess.run([comando, ruta_url], check=True, timeout=10, 
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        subprocess.run(["open", ruta_absoluta], check=True, timeout=5)
                         return
-                    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-                        continue
+                    except Exception:
+                        pass
                 
-        except Exception:
-            pass
+                # En Linux, intentar obtener el navegador predeterminado usando xdg-settings
+                if sistema == "Linux":
+                    navegador_predeterminado = None
+                    try:
+                        resultado = subprocess.run(["xdg-settings", "get", "default-web-browser"], 
+                                                 capture_output=True, text=True, timeout=3)
+                        if resultado.returncode == 0:
+                            app_desktop = resultado.stdout.strip()
+                            
+                            # Mapear archivos .desktop a comandos ejecutables
+                            mapeo_navegadores = {
+                                'firefox.desktop': 'firefox',
+                                'google-chrome.desktop': 'google-chrome',
+                                'chromium-browser.desktop': 'chromium-browser',
+                                'chromium.desktop': 'chromium',
+                                'opera.desktop': 'opera',
+                                'brave-browser.desktop': 'brave-browser'
+                            }
+                            
+                            navegador_predeterminado = mapeo_navegadores.get(app_desktop)
+                    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                        pass
+                    
+                    # Si detectamos el navegador predeterminado, intentar usarlo directamente
+                    if navegador_predeterminado:
+                        try:
+                            subprocess.run([navegador_predeterminado, ruta_url], check=True, timeout=5,
+                                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            return
+                        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                            pass
+            
+            # Método universal: usar webbrowser.open() como fallback para todos los sistemas
+            try:
+                # En Linux, configurar BROWSER para evitar evince
+                if sistema == "Linux":
+                    original_browser = os.environ.get('BROWSER')
+                    
+                    # Solo configurar BROWSER si no está ya configurado
+                    if not original_browser:
+                        # Buscar un navegador disponible para configurar como fallback
+                        navegadores_fallback = ["firefox", "google-chrome", "chromium-browser", "chromium"]
+                        for navegador in navegadores_fallback:
+                            try:
+                                subprocess.run(["which", navegador], check=True, 
+                                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                os.environ['BROWSER'] = navegador
+                                break
+                            except subprocess.CalledProcessError:
+                                continue
+                
+                # Usar webbrowser.open()
+                webbrowser.open(ruta_url)
+                return
+                
+            finally:
+                # Restaurar variable de entorno original solo si la configuramos nosotros
+                if sistema == "Linux" and 'original_browser' in locals():
+                    if not original_browser and 'BROWSER' in os.environ:
+                        del os.environ['BROWSER']
+            
+        except Exception as e:
+            print(f"Error al abrir PDF: {e}")
+            # Último recurso: intentar métodos alternativos
+            try:
+                if sistema == "Windows":
+                    # En Windows, intentar forzar apertura en navegador con start
+                    # Esto abrirá el archivo con la aplicación predeterminada para PDFs
+                    subprocess.run(["cmd", "/c", "start", "", ruta_url], check=True, shell=True)
+                elif sistema == "Linux":
+                    # Usar xdg-open como último recurso en Linux
+                    subprocess.run(["xdg-open", ruta_absoluta], check=True)
+            except Exception:
+                # Si todo falla, intentar con os.startfile como último último recurso solo en Windows
+                if sistema == "Windows":
+                    try:
+                        os.startfile(ruta_absoluta)
+                    except Exception:
+                        pass
     
     def mostrar_notificacion_pdf(self, ruta_pdf):
         """Muestra el botón para abrir el PDF."""
