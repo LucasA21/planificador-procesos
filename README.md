@@ -58,7 +58,7 @@ planificador-procesos/
 La carpeta `ejecutables` contiene ejecutables listos para usar:
 
 - **Linux:** `ejecutables/Simulador_Planificacion`
-- **Windows:** `ejecutables/windows/Simulador_Planificacion.exe`
+- **Windows:** `ejecutables/Simulador_Planificacion.exe`
 
 Para usar la aplicacion: 
 1. En **"Seleccionar Archivo"** se elige el conjunto de procesos en formato JSON.
