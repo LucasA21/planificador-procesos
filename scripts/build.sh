@@ -19,7 +19,9 @@ mkdir -p dist/linux
 
 # Generar ejecutable para Linux
 echo "Generando ejecutable para Linux..."
-poetry run pyinstaller simulador.spec --distpath dist/linux
+# Asegurar que las variables de entorno estén disponibles
+export DISPLAY=${DISPLAY:-:0}
+poetry run pyinstaller simulador.spec --distpath dist/linux --clean
 
 # Verificar si se generó correctamente
 if [ -f "dist/linux/Simulador_Planificacion" ]; then

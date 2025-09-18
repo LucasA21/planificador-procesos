@@ -45,7 +45,7 @@ class SelectorPoliticas(ctk.CTkFrame):
         self.menu_politica = ctk.CTkComboBox(
             main_frame, 
             variable=self.politica_var,
-            values=["FCFS", "Prioridad Externa", "Round Robin", "SPN", "SRTN"],
+            values=["FCFS", "Round Robin", "SPN", "SRTN", "Prioridad Externa"],
             width=int(300 * self.factor_escala), 
             height=int(50 * self.factor_escala),  
             corner_radius=int(12 * self.factor_escala),
