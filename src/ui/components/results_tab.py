@@ -392,71 +392,121 @@ class PestañaResultados(ctk.CTkFrame):
         mensaje_label.grid(row=0, column=0, pady=int(20 * self.factor_escala), sticky="ew")
     
     def _abrir_pdf(self):
-        """Abre el PDF actual."""
+        """Abre el PDF actual usando el navegador web predeterminado."""
         if not self.ruta_pdf_actual:
             print("Error: No hay ruta de PDF configurada")
             return
             
         import os
+        import webbrowser
         import subprocess
         import platform
+        from urllib.parse import urljoin
+        from pathlib import Path
         
         # Convertir a ruta absoluta y verificar que existe
         ruta_absoluta = os.path.abspath(self.ruta_pdf_actual)
-        print(f"Intentando abrir PDF: {ruta_absoluta}")
         
         if not os.path.exists(ruta_absoluta):
-            print(f"Error: El archivo PDF no existe en {ruta_absoluta}")
             # Intentar buscar en el directorio actual
             directorio_actual = os.getcwd()
-            print(f"Directorio actual: {directorio_actual}")
             
             # Buscar archivos PDF en el directorio actual y subdirectorios
             for root, dirs, files in os.walk(directorio_actual):
                 for file in files:
                     if file.endswith('.pdf') and 'reporte_simulacion' in file:
                         ruta_encontrada = os.path.join(root, file)
-                        print(f"PDF encontrado: {ruta_encontrada}")
                         ruta_absoluta = ruta_encontrada
                         break
                 if ruta_absoluta != self.ruta_pdf_actual:
                     break
             
             if not os.path.exists(ruta_absoluta):
-                print("No se encontró ningún PDF de simulación")
                 return
         
         try:
+            # Convertir la ruta a URL file:// para el navegador
+            ruta_url = Path(ruta_absoluta).as_uri()
+            
+            # Intentar usar el navegador predeterminado del sistema de forma inteligente
+            navegador_predeterminado = None
+            
+            try:
+                # En Linux, intentar obtener el navegador predeterminado usando xdg-settings
+                resultado = subprocess.run(["xdg-settings", "get", "default-web-browser"], 
+                                         capture_output=True, text=True, timeout=3)
+                if resultado.returncode == 0:
+                    app_desktop = resultado.stdout.strip()
+                    
+                    # Mapear archivos .desktop a comandos ejecutables
+                    mapeo_navegadores = {
+                        'firefox.desktop': 'firefox',
+                        'google-chrome.desktop': 'google-chrome',
+                        'chromium-browser.desktop': 'chromium-browser',
+                        'chromium.desktop': 'chromium',
+                        'opera.desktop': 'opera',
+                        'brave-browser.desktop': 'brave-browser'
+                    }
+                    
+                    navegador_predeterminado = mapeo_navegadores.get(app_desktop)
+            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                pass
+            
+            # Si detectamos el navegador predeterminado, intentar usarlo directamente
+            if navegador_predeterminado:
+                try:
+                    subprocess.run([navegador_predeterminado, ruta_url], check=True, timeout=5,
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    return
+                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+                    pass
+            
+            # Si no pudimos detectar o usar el navegador predeterminado, usar webbrowser.open()
+            # pero configurando BROWSER para evitar evince
+            original_browser = os.environ.get('BROWSER')
+            
+            # Solo configurar BROWSER si no está ya configurado
+            if not original_browser:
+                # Buscar un navegador disponible para configurar como fallback
+                navegadores_fallback = ["firefox", "google-chrome", "chromium-browser", "chromium"]
+                for navegador in navegadores_fallback:
+                    try:
+                        subprocess.run(["which", navegador], check=True, 
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        os.environ['BROWSER'] = navegador
+                        break
+                    except subprocess.CalledProcessError:
+                        continue
+            
+            try:
+                webbrowser.open(ruta_url)
+                return
+            finally:
+                # Restaurar variable de entorno original solo si la configuramos nosotros
+                if not original_browser and 'BROWSER' in os.environ:
+                    del os.environ['BROWSER']
+            
+            # Si webbrowser falla, intentar métodos específicos del sistema operativo
             sistema = platform.system()
-            print(f"Sistema operativo detectado: {sistema}")
             
             if sistema == "Windows":
-                print("Usando os.startfile para Windows")
                 os.startfile(ruta_absoluta)
             elif sistema == "Darwin":  # macOS
-                print("Usando comando 'open' para macOS")
                 subprocess.run(["open", ruta_absoluta], check=True)
             else:  # Linux
-                print("Usando comando 'xdg-open' para Linux")
-                # Intentar diferentes comandos para abrir PDF en Linux
-                comandos = ["xdg-open", "evince", "okular", "firefox", "google-chrome", "chromium-browser"]
+                # Solo navegadores web como último recurso
+                comandos_alternativos = ["opera", "brave-browser", "midori"]
                 
-                for comando in comandos:
+                for comando in comandos_alternativos:
                     try:
-                        print(f"Intentando con: {comando}")
-                        subprocess.run([comando, ruta_absoluta], check=True, timeout=5)
-                        print(f"PDF abierto exitosamente con {comando}")
+                        subprocess.run([comando, ruta_url], check=True, timeout=10, 
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         return
                     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
-                        print(f"Comando {comando} falló, probando siguiente...")
                         continue
                 
-                print("Error: No se pudo abrir el PDF con ningún comando disponible")
-                
-        except Exception as e:
-            print(f"Error al abrir el PDF: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            pass
     
     def mostrar_notificacion_pdf(self, ruta_pdf):
         """Muestra el botón para abrir el PDF."""

@@ -654,9 +654,7 @@ class PE:
                             'evento': 'inicio ejecucion',
                             'estado': 'ejecutando'
                         })
-                        # Ejecutar inmediatamente después de que termine el TIP/TCP
-                        # NOTA: ejecutar_proceso_actual() puede terminar el proceso e invocar aplicar_tfp(),
-                        # lo cual puede cambiar self.tipo_bloqueo. Por eso usamos tipo_original para registrar el fin.
+
                         self.ejecutar_proceso_actual()
 
                 # Registrar evento de fin con el tipo ORIGINAL del bloqueo
@@ -672,12 +670,6 @@ class PE:
                     self.tcp_despues_tip_activo = False
                     self.registrar_fin_tcp_despues_tip = True
 
-                # IMPORTANTE: Solo limpiar el tipo de bloqueo si NO fue cambiado por una nueva operación.
-                # Si durante la ejecución se aplicó un nuevo bloqueo (p.ej. aplicar_tfp()) entonces
-                # self.tipo_bloqueo ya apunta al nuevo bloqueo y self.tiempo_restante_bloqueo fue inicializado.
-                # Aquí simplemente ponemos None **solo** si el tipo era el que acabamos de terminar y
-                # no se reaplicó otro inmediatamente.
-                # Para simplificar y evitar perder el nuevo bloqueo, hacemos:
                 if self.tipo_bloqueo == tipo_original:
                     self.tipo_bloqueo = None
 

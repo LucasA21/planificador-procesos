@@ -565,6 +565,9 @@ class Simulador:
         filename = f"reporte_simulacion_{timestamp}.pdf"
         filepath = os.path.join(output_dir, filename)
         
+        # Determinar el nombre del algoritmo
+        algoritmo_nombre = self.algoritmo_actual.__class__.__name__
+        
         # Preparar datos para el PDF
         datos_pdf = {
             'tiempo_total': self.algoritmo_actual.tiempo_actual - 1,
@@ -576,7 +579,8 @@ class Simulador:
             'eventos': self.algoritmo_actual.resultados,
             'tip': self.algoritmo_actual.tiempo_tip,
             'tcp': self.algoritmo_actual.tiempo_tcp,
-            'tfp': self.algoritmo_actual.tiempo_tfp
+            'tfp': self.algoritmo_actual.tiempo_tfp,
+            'algoritmo': algoritmo_nombre
         }
         
         # Agregar información de procesos
@@ -612,7 +616,7 @@ class Simulador:
         # Exportar PDF
         try:
             ruta_pdf = exportador.exportar_simulacion(datos_pdf, filepath)
-            print(f"✅ Reporte PDF exportado a: {ruta_pdf}")
+            print(f"Lista de eventos exportada a: {ruta_pdf}")
             return ruta_pdf
         except Exception as e:
             print(f"❌ Error al exportar PDF: {e}")

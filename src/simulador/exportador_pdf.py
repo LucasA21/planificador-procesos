@@ -102,8 +102,12 @@ class ExportadorPDF:
         contenido.extend(self._crear_tabla_eventos(datos_simulacion))
         contenido.append(PageBreak())
         contenido.extend(self._crear_estadisticas_procesos(datos_simulacion))
-        contenido.append(PageBreak())
-        contenido.extend(self._crear_diagrama_gantt(datos_simulacion))
+        
+        # Solo agregar diagrama de Gantt si no es SRTN o PE
+        algoritmo = datos_simulacion.get('algoritmo', '')
+        if algoritmo not in ['SRTN', 'PE']:
+            contenido.append(PageBreak())
+            contenido.extend(self._crear_diagrama_gantt(datos_simulacion))
         
         # Generar PDF
         doc.build(contenido)
@@ -122,6 +126,7 @@ class ExportadorPDF:
         # Información de la simulación
         info_data = [
             ['Fecha de Simulación', datetime.now().strftime("%d/%m/%Y %H:%M:%S")],
+            ['Algoritmo', datos.get('algoritmo', 'No especificado')],
             ['Tiempo Total', f"{datos.get('tiempo_total', 0)} unidades de tiempo"],
             ['Procesos Simulados', f"{len(datos.get('procesos', []))} procesos"],
             ['TR Medio', f"{datos.get('tiempo_medio_retorno', 0):.2f}"],
